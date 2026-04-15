@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Building2, FileText, Plus, ArrowRight, Search } from 'lucide-react';
+import { Building2, FileText, Plus, ArrowRight, Search, Users } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 
@@ -22,11 +22,20 @@ const Empresas = () => {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     loadEmpresas();
+    checkAdmin();
   }, []);
+
+  const checkAdmin = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' });
+    setIsAdmin(!!data);
+  };
 
   const loadEmpresas = async () => {
     setLoading(true);
@@ -80,10 +89,18 @@ const Empresas = () => {
               Visão geral das empresas do escritório
             </p>
           </div>
-          <Button className="gap-2" onClick={() => navigate('/importar')}>
-            <Plus className="w-4 h-4" />
-            Importar Documentos
-          </Button>
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Button variant="outline" className="gap-2" onClick={() => navigate('/usuarios')}>
+                <Users className="w-4 h-4" />
+                Usuários
+              </Button>
+            )}
+            <Button className="gap-2" onClick={() => navigate('/importar')}>
+              <Plus className="w-4 h-4" />
+              Importar Documentos
+            </Button>
+          </div>
         </div>
 
         {/* Search */}

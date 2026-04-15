@@ -20,7 +20,7 @@ const Header = ({ empresa }: HeaderProps) => {
     <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
       <div className="container mx-auto flex items-center justify-between h-16 px-4">
         <div className="flex items-center gap-3">
-          <img src={logo} alt="Diretriz Contabilidade" className="h-8" />
+          <img src={logo} alt="Diretriz Contabilidade" className="h-24" />
         </div>
         <div className="flex items-center gap-3">
           {empresa && (
