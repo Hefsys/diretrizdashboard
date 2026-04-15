@@ -14,8 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        heading: ["Outfit", "sans-serif"],
-        body: ["DM Sans", "sans-serif"],
+        heading: ["Kanit", "sans-serif"],
+        body: ["Kanit", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
