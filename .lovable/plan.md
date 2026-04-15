@@ -1,53 +1,46 @@
 
 
-## Plano: Corrigir Salvamento de Empresas + Seletor de Período
+## Plan: Apply Diretriz Visual Identity to the Platform
 
-### Problema 1: Empresas não salvam
+### Brand Identity Summary (from PDF)
 
-Duas causas identificadas:
+| Element | Value |
+|---------|-------|
+| **Primary Red** | `#ED3537` (RGB 237, 50, 55) — icon/accent color |
+| **Primary Dark Blue** | `#10143D` (approx. RGB 16, 20, 61) — text, backgrounds |
+| **Light tints** | Red tints: `#F28B8B`, `#F6AEBD`, `#FBDCE6`; Blue tints: `#3C4A75`, `#6B7596`, `#9CA3AF`, `#D1D5DB` |
+| **Font (headings)** | Kanit SemiBold |
+| **Font (body)** | Kanit Regular / Metropolis Semi Bold (subtitle) |
+| **Logo** | Red "D" arrow icon + dark blue "Diretriz" text |
+| **App name** | Diretriz Contabilidade e Consultoria |
 
-1. **`user_id` nullable nas tabelas `empresas` e `documentos`** — a RLS exige `auth.uid() = user_id`, mas se `user_id` for null a linha fica invisível. Precisa tornar `user_id NOT NULL` com default `auth.uid()`.
+### Changes
 
-2. **Busca de empresa por CNPJ sem filtro de user_id** — a RLS já filtra, mas se o CNPJ vier vazio do PDF, a lógica pula a busca e tenta criar sem validação adequada.
+1. **Copy logo asset** — Extract the horizontal logo from the PDF and save it to `src/assets/logo-diretriz.png`. Update `Header.tsx` and `Auth.tsx` imports.
 
-### Problema 2: Adicionar meses passados/futuros
+2. **Update `index.css`** — Replace the entire CSS variable palette:
+   - `--background`: dark blue (`#10143D` / `222 65% 10%`)
+   - `--foreground`: light gray
+   - `--card`: slightly lighter dark blue
+   - `--primary`: red `#ED3537`
+   - `--accent`: red or blue tint
+   - `--secondary`, `--muted`, `--border`: blue tints from the brand guide
+   - `--destructive`: keep red
 
-Atualmente o campo `periodo` vem do PDF (se existir). Precisa de um seletor manual de período para que o usuário escolha mês/ano ao fazer upload, permitindo análises históricas e projeções.
+3. **Update fonts** — Replace Google Fonts import from DM Sans/Outfit to **Kanit** (weights 400, 500, 600, 700). Update `--font-heading` and `--font-body` to Kanit.
 
----
+4. **Update `tailwind.config.ts`** — Change `fontFamily.heading` and `fontFamily.body` to `["Kanit", "sans-serif"]`.
 
-### Migração SQL
+5. **Update `index.html`** — Change title and meta tags from "Lovable App" to "Diretriz - Contabilidade e Consultoria".
 
-```sql
--- Tornar user_id NOT NULL com default
-ALTER TABLE empresas ALTER COLUMN user_id SET DEFAULT auth.uid();
-ALTER TABLE empresas ALTER COLUMN user_id SET NOT NULL;
+6. **Update `Auth.tsx`** — Change heading text from "ContábilView" to "Diretriz", update subtitle.
 
-ALTER TABLE documentos ALTER COLUMN user_id SET DEFAULT auth.uid();
-ALTER TABLE documentos ALTER COLUMN user_id SET NOT NULL;
-```
+7. **Update `Header.tsx`** — Update alt text and ensure logo reference points to new asset.
 
-### Alterações no Código
+### Technical Details
 
-| Arquivo | Mudança |
-|---------|---------|
-| `Index.tsx` | Adicionar seletor de período (mês/ano) acima dos drop zones. Passar período selecionado ao `saveDocumento`. Melhorar tratamento de erros no `findOrCreateEmpresa` e `saveDocumento` (exibir toast em caso de falha). |
-| `EmpresaSelector.tsx` | Recarregar lista após criar empresa (já funciona). Garantir que o dropdown feche corretamente. |
-| `DocumentHistory.tsx` | Já agrupa por período — sem mudança estrutural. |
-| `Dashboard.tsx` | Adicionar dropdown de período no header para trocar entre meses salvos da empresa. |
-
-### Novo Componente: `PeriodoSelector.tsx`
-
-- Dropdown com mês (Janeiro–Dezembro) e ano (2020–2027)
-- Valor padrão: mês/ano atual
-- Formato salvo: "01/2026", "02/2026", etc.
-- Posicionado entre o seletor de empresa e os drop zones
-
-### Fluxo Atualizado
-
-1. Usuário seleciona empresa
-2. Usuário escolhe o período (mês/ano) — pode ser passado ou futuro
-3. Faz upload dos PDFs
-4. Documentos salvos com o período selecionado (não o extraído do PDF)
-5. No dashboard, pode trocar entre períodos para comparar
+- CSS variables will be recalculated to HSL format for the Diretriz palette
+- The Kanit font will be loaded from Google Fonts (it's available there)
+- Logo will be copied from the parsed PDF images to `src/assets/`
+- All existing component styling (cards, buttons, charts) will automatically inherit the new colors via CSS variables — no component-level changes needed
 
