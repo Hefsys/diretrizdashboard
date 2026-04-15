@@ -8,6 +8,7 @@ import Auth from "./pages/Auth.tsx";
 import Empresas from "./pages/Empresas.tsx";
 import Index from "./pages/Index.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
+import Usuarios from "./pages/Usuarios.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -23,6 +24,7 @@ const App = () => (
           <Route path="/" element={<AuthGuard><Empresas /></AuthGuard>} />
           <Route path="/importar" element={<AuthGuard><Index /></AuthGuard>} />
           <Route path="/dashboard" element={<AuthGuard><Dashboard /></AuthGuard>} />
+          <Route path="/usuarios" element={<AuthGuard><Usuarios /></AuthGuard>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
