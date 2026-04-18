@@ -33,14 +33,12 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[hsl(235_58%_15%)] px-4">
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
-          <div className="bg-[hsl(235_58%_15%)] rounded-2xl p-6 mb-4 inline-block">
-            <img src={logo} alt="Diretriz Contabilidade" className="h-40 mx-auto" />
-          </div>
-          <h1 className="font-heading text-2xl font-semibold text-foreground">Acessar sistema</h1>
-          <p className="text-sm text-muted-foreground mt-1">Entre com suas credenciais</p>
+          <img src={logo} alt="Diretriz Contabilidade" className="h-40 mx-auto mb-4" />
+          <h1 className="font-heading text-2xl font-semibold text-white">Acessar sistema</h1>
+          <p className="text-sm text-white/70 mt-1">Entre com suas credenciais</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4">
@@ -78,7 +76,7 @@ const Auth = () => {
           </Button>
         </form>
 
-        <p className="text-xs text-muted-foreground text-center">
+        <p className="text-xs text-white/60 text-center">
           Acesso restrito. Contate o administrador para obter credenciais.
         </p>
       </div>
