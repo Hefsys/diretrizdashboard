@@ -1,5 +1,5 @@
 import { parseValorBR } from '../parse-valor-br';
-import { TextItem, LinhaReconstruida, reconstruirLinhas, extractHeader } from './reconstruir-linhas';
+import { TextItem, reconstruirLinhas, extractHeader } from './reconstruir-linhas';
 
 export interface BalancoData {
   empresa: string;
@@ -34,6 +34,30 @@ export interface BalancoData {
   };
 }
 
+const MONEY_PATTERN = /\(?\d+(?:\.\d{3})*,\d{2}\)?\s*[DC]?/gi;
+
+function normalizarLabel(str: string): string {
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[()]/g, ' ')
+    .replace(/[\s\-/]+/g, ' ')
+    .trim()
+    .toUpperCase();
+}
+
+function extrairValorELabel(txt: string): { label: string; valor: number } | null {
+  const valores = txt.match(MONEY_PATTERN) || [];
+  if (!valores.length) return null;
+
+  const valorRaw = valores[valores.length - 1].trim();
+  const labelSemValores = txt.replace(MONEY_PATTERN, ' ').replace(/\s+/g, ' ').trim();
+  const label = normalizarLabel(labelSemValores);
+  if (!label || /^(SALDO|DATA|PAGINA|CNPJ|BALANCO|DEMONSTRACAO)\b/.test(label)) return null;
+
+  return { label, valor: Math.abs(parseValorBR(valorRaw)) };
+}
+
 export function parseBalanco(items: TextItem[]): BalancoData {
   const linhas = reconstruirLinhas(items);
   const header = extractHeader(linhas);
@@ -41,47 +65,43 @@ export function parseBalanco(items: TextItem[]): BalancoData {
   const r: Record<string, number> = {};
 
   for (const linha of linhas) {
-    const txt = linha.textoCompleto;
+    const parsed = extrairValorELabel(linha.textoCompleto);
+    if (!parsed) continue;
 
-    // Match value with D/C suffix at end of line
-    const matchValor = txt.match(/([\d]+(?:\.[\d]{3})*(?:,[\d]{2}))\s*([DC])\s*$/i);
-    if (!matchValor) continue;
+    const { label, valor } = parsed;
 
-    const valor = Math.abs(parseValorBR(matchValor[1]));
-    const label = txt.replace(matchValor[0], '').trim().toUpperCase();
-
-    console.log(`Balanço: "${label}" → ${valor} (${matchValor[2]})`);
+    console.log(`Balanço: "${label}" → ${valor}`);
 
     if (/^ATIVO$/.test(label)) r.ativoTotal = valor;
     else if (/^ATIVO CIRCULANTE$/.test(label)) r.ativoCirculante = valor;
-    else if (/^ATIVO N[ÃA]O CIRCULANTE$/.test(label)) r.ativoNaoCirculante = valor;
-    else if (/^DISPON[ÍI]VEL$/.test(label)) r.disponivel = valor;
-    else if (/^CAIXA$/.test(label) || /^CAIXA GERAL$/.test(label)) r.caixa = (r.caixa || 0) + valor;
-    else if (/^BANCOS CONTA MOVIMENTO$/.test(label)) r.bancos = valor;
-    else if (/^APLICA[ÇC][ÕO]ES FINANCEIRAS/.test(label)) r.aplicacoes = valor;
+    else if (/^ATIVO NAO CIRCULANTE$/.test(label)) r.ativoNaoCirculante = valor;
+    else if (/^DISPONIVEL$|CAIXA E EQUIVALENTES|DISPONIBILIDADES/.test(label)) r.disponivel = valor;
+    else if (/^CAIXA$|^CAIXA GERAL$|NUMERARIO/.test(label)) r.caixa = (r.caixa || 0) + valor;
+    else if (/BANCOS? CONTA MOVIMENTO|CONTA CORRENTE|BANCO/.test(label)) r.bancos = (r.bancos || 0) + valor;
+    else if (/APLICACOES FINANCEIRAS|APLICACAO/.test(label)) r.aplicacoes = (r.aplicacoes || 0) + valor;
     else if (/^CLIENTES$/.test(label)) r.clientes = valor;
-    else if (/^DUPLICATAS A RECEBER$/.test(label)) r.clientes = r.clientes || valor;
-    else if (/^OUTROS CR[ÉE]DITOS$/.test(label)) r.outrosCreditos = valor;
+    else if (/DUPLICATAS A RECEBER|CONTAS A RECEBER|CLIENTES/.test(label)) r.clientes = r.clientes || valor;
+    else if (/^OUTROS CREDITOS$|TRIBUTOS A RECUPERAR|IMPOSTOS A RECUPERAR|ADIANTAMENTOS/.test(label)) r.outrosCreditos = valor;
     else if (/^ESTOQUES$/.test(label)) r.estoques = valor;
-    else if (/^IMOBILIZADO$/.test(label)) r.imobilizado = valor;
+    else if (/^IMOBILIZADO$|BENS EM OPERACAO|INTANGIVEL/.test(label)) r.imobilizado = valor;
     else if (/^PASSIVO CIRCULANTE$/.test(label)) r.passivoCirculante = valor;
     else if (/^FORNECEDORES$/.test(label) && !r.fornecedores) r.fornecedores = valor;
-    else if (/^OBRIGA[ÇC][ÕO]ES TRIBUT[ÁA]RIAS$/.test(label)) r.obrigTributarias = valor;
-    else if (/^OBRIGA[ÇC][ÕO]ES TRABALHIST/.test(label)) r.obrigTrabalhistas = valor;
-    else if (/^OUTRAS OBRIGA[ÇC][ÕO]ES$/.test(label)) r.outrasObrigacoes = valor;
-    else if (/^PATRIM[ÔO]NIO L[ÍI]QUIDO$/.test(label)) r.patrimonioLiquido = valor;
+    else if (/FORNECEDORES|DUPLICATAS A PAGAR/.test(label) && !r.fornecedores) r.fornecedores = valor;
+    else if (/OBRIGACOES TRIBUTARIAS|OBRIGACOES FISCAIS|IMPOSTOS.*RECOLHER|TRIBUTOS.*RECOLHER|CONTRIBUICOES.*RECOLHER/.test(label)) r.obrigTributarias = valor;
+    else if (/OBRIGACOES TRABALHIST|OBRIGACOES SOCIAIS|SALARIOS.*PAGAR|PRO LABORE.*PAGAR|ENCARGOS.*RECOLHER|INSS.*RECOLHER|FGTS.*RECOLHER/.test(label)) r.obrigTrabalhistas = valor;
+    else if (/OUTRAS OBRIGACOES|EMPRESTIMOS|FINANCIAMENTOS|ADIANTAMENTO DE CLIENTES/.test(label)) r.outrasObrigacoes = valor;
+    else if (/^PATRIMONIO LIQUIDO$/.test(label)) r.patrimonioLiquido = valor;
     else if (/^CAPITAL SOCIAL$/.test(label) && !r.capitalSocial) r.capitalSocial = valor;
-    else if (/^LUCROS OU PREJU[ÍI]ZOS ACUMULADOS$/.test(label)) r.lucrosAcumulados = valor;
+    else if (/^LUCROS OU PREJUIZOS ACUMULADOS$/.test(label)) r.lucrosAcumulados = valor;
     else if (/^LUCROS ACUMULADOS$/.test(label) && !r.lucrosAcumulados) r.lucrosAcumulados = valor;
-    else if (/^AJUSTES DE EXERC[ÍI]CIOS/.test(label)) r.ajustes = valor;
+    else if (/^AJUSTES DE EXERCICIOS|RESULTADO DO EXERCICIO/.test(label)) r.ajustes = valor;
   }
 
-  console.log("=== VALIDAÇÃO BALANÇO ===");
-  console.log("Ativo Total:", r.ativoTotal, "(esperado: 6698934.72)");
-  console.log("Ativo Circulante:", r.ativoCirculante, "(esperado: 6698934.72)");
-  console.log("Disponível:", r.disponivel, "(esperado: 307233.10)");
-  console.log("Passivo Circulante:", r.passivoCirculante, "(esperado: 55704.53)");
-  console.log("Patrimônio Líquido:", r.patrimonioLiquido, "(esperado: 6643230.19)");
+  if (!r.disponivel) r.disponivel = (r.caixa || 0) + (r.bancos || 0) + (r.aplicacoes || 0);
+  if (!r.ativoCirculante) r.ativoCirculante = (r.disponivel || 0) + (r.clientes || 0) + (r.outrosCreditos || 0) + (r.estoques || 0);
+  if (!r.ativoTotal) r.ativoTotal = (r.ativoCirculante || 0) + (r.ativoNaoCirculante || r.imobilizado || 0);
+  if (!r.passivoCirculante) r.passivoCirculante = (r.fornecedores || 0) + (r.obrigTributarias || 0) + (r.obrigTrabalhistas || 0) + (r.outrasObrigacoes || 0);
+  if (!r.patrimonioLiquido && r.ativoTotal) r.patrimonioLiquido = r.ativoTotal - (r.passivoCirculante || 0);
 
   return {
     ...header,
