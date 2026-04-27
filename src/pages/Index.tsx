@@ -199,6 +199,7 @@ const Index = () => {
       return;
     }
     setRefreshKey(k => k + 1);
+    return dadosMap.data;
   }, []);
 
   const handleFileSelected = useCallback(async (category: CategoryKey, file: File) => {
@@ -234,7 +235,13 @@ const Index = () => {
 
     // Save to database
     if (empresa) {
-      await saveDocumento(empresa.id, result, periodoFormatado);
+      const dadosParseados = await saveDocumento(empresa.id, result, periodoFormatado);
+      if (dadosParseados) {
+        const group = getDocumentGroup(result.reportType);
+        if (group === 'balanco') useContabilStore.setState({ balanco: dadosParseados, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
+        else if (group === 'dre') useContabilStore.setState({ dre: dadosParseados, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
+        else if (group === 'balancete') useContabilStore.setState({ balancete: dadosParseados, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
+      }
     }
 
     toast.success(`${file.name} processado com sucesso!`);
