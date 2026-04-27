@@ -113,16 +113,16 @@ export function parseDRE(items: TextItem[], options: { debug?: boolean } = {}): 
     }
 
     // Deduções
-    else if (/DEVOLU[ÇC][ÃA]O/.test(label)) r.devolucoes = neg(valor);
+    else if (/DEVOLU[CÇ][AÃ]O|DEVOLUCAO/.test(label)) r.devolucoes = neg(valor);
     else if (/ICMS\s+S/.test(label) || (/\bICMS\b/.test(label) && /\(-?\)/.test(label))) r.icms = neg(valor);
     else if (/COFINS/.test(label) && !label.includes('DESPESA')) r.cofins = neg(valor);
     else if (/\bPIS\b/.test(label) && !label.includes('DESPESA')) r.pis = neg(valor);
     else if (/SIMPLES\s+NACIONAL/.test(label)) r.outrasDeducoes = (r.outrasDeducoes || 0) + neg(valor);
-    else if (/CONTRIBUI[ÇC][ÃA]O\s+SOCIAL/.test(label)) r.csll = neg(valor);
+    else if (/CONTRIBUI[CÇ][AÃ]O\s+SOCIAL|CONTRIBUICAO\s+SOCIAL/.test(label)) r.csll = neg(valor);
     else if (/IMPOSTO\s+DE\s+RENDA/.test(label)) r.irpj = neg(valor);
-    else if (/SUBSTITUI[ÇC][ÃA]O/.test(label)) r.st = neg(valor);
-    else if (/DEDU[ÇC][ÕO]ES/.test(label) && /TOTAL/.test(label)) r.totalDeducoes = neg(valor);
-    else if (/^[\(-]*\s*DEDU[ÇC][ÕO]ES/.test(label)) r.totalDeducoes = r.totalDeducoes || neg(valor);
+    else if (/SUBSTITUI[CÇ][AÃ]O|SUBSTITUICAO/.test(label)) r.st = neg(valor);
+    else if (/DEDU[CÇ][OÕ]ES|DEDUCOES/.test(label) && /TOTAL/.test(label)) r.totalDeducoes = neg(valor);
+    else if (/^[\(-]*\s*(DEDU[CÇ][OÕ]ES|DEDUCOES)/.test(label)) r.totalDeducoes = r.totalDeducoes || neg(valor);
     else if (currentSection === 'deducoes') r.outrasDeducoes = (r.outrasDeducoes || 0) + neg(valor);
 
     // Receita Líquida
