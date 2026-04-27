@@ -71,6 +71,13 @@ function removerValoresFinais(str: string): string {
 
 type DRESection = 'receitaBruta' | 'deducoes' | 'despesasOperacionais' | null;
 
+function escolherValorDRE(label: string, valores: string[]): string {
+  if (valores.length === 1) return valores[0];
+  const isLinhaResumo = /RECEITA\s+LIQUIDA|LUCRO|RESULTADO|DESPESAS\s+OPERACIONAIS|DEDUCOES|TOTAL/.test(label);
+  if (isLinhaResumo) return valores[valores.length - 1];
+  return valores[0];
+}
+
 export function parseDRE(items: TextItem[], options: { debug?: boolean } = {}): DREData {
   const { debug = true } = options;
   const linhas = reconstruirLinhas(items);
@@ -93,7 +100,7 @@ export function parseDRE(items: TextItem[], options: { debug?: boolean } = {}): 
       continue;
     }
 
-    const valorRaw = valores[valores.length - 1].trim();
+    const valorRaw = escolherValorDRE(label, valores).trim();
     const valor = parseValorDRE(valorRaw);
 
     if (debug) console.log(`DRE: "${label}" → ${valor}`);
