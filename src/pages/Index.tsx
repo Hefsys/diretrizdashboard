@@ -211,6 +211,11 @@ const Index = () => {
       return;
     }
 
+    if (category === 'dre' && result.reportType === 'desconhecido') {
+      result.reportType = 'dre-detalhada';
+      result.reportTypeLabel = 'DRE Detalhada';
+    }
+
     // Validate type matches category
     const expectedTypes = CATEGORY_TYPES[category];
     if (!expectedTypes.includes(result.reportType) && result.reportType !== 'desconhecido') {
