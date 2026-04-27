@@ -253,7 +253,13 @@ const Index = () => {
       .map(c => c.parsed!);
     // Only setFiles if there are new parsed files (not loaded from DB)
     if (allParsed.length > 0) {
-      setFiles(allParsed);
+      const currentState = useContabilStore.getState();
+      useContabilStore.setState({
+        files: allParsed,
+        empresa: selectedEmpresa?.nome || currentState.empresa,
+        cnpj: selectedEmpresa?.cnpj || currentState.cnpj,
+        periodo: periodoFormatado,
+      });
     }
     navigate('/dashboard');
   };
