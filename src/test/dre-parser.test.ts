@@ -49,4 +49,34 @@ describe('parseDRE', () => {
     expect(result.lucroLiquido).toBe(1221468.22);
     expect(validateDREData(result)).toEqual([]);
   });
+
+  it('reconhece DRE Domínio com receita/despesa flexíveis e valores duplicados', () => {
+    const items = makeItems([
+      ['EMPRESA EXEMPLO LTDA'],
+      ['CNPJ 12.345.678/0001-90'],
+      ['Período: 01/12/2025 - 31/12/2025'],
+      ['RECEITA BRUTA'],
+      ['SERVIÇOS PRESTADO MERCADO EXTERNO', '52.858,86 52.858,86'],
+      ['DEDUÇÕES'],
+      ['(-) SIMPLES NACIONAL', '(2.881,31) (2.881,31)'],
+      ['RECEITA LÍQUIDA', '49.977,55'],
+      ['LUCRO BRUTO', '49.977,55'],
+      ['DESPESAS OPERACIONAIS', '(4.338,50)'],
+      ['DESPESAS ADMINISTRATIVAS'],
+      ['PRÓ-LABORE', '(3.200,00)'],
+      ['ASSISTÊNCIA CONTÁBIL', '(1.138,50) (4.338,50)'],
+      ['RESULTADO OPERACIONAL', '45.639,05'],
+      ['LUCRO LÍQUIDO DO EXERCÍCIO', '45.639,05'],
+    ]);
+
+    const result = parseDRE(items, { debug: false });
+
+    expect(result.receitaBruta).toBe(52858.86);
+    expect(result.deducoes.total).toBe(-2881.31);
+    expect(result.receitaLiquida).toBe(49977.55);
+    expect(result.despesasOperacionais.total).toBe(-4338.5);
+    expect(result.despesasOperacionais.pessoal.salarios).toBe(-3200);
+    expect(result.despesasOperacionais.despesasGerais.servicos).toBe(-4338.5);
+    expect(result.lucroLiquido).toBe(45639.05);
+  });
 });
