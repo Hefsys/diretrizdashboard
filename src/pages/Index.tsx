@@ -7,6 +7,7 @@ import PeriodoSelector from '@/components/PeriodoSelector';
 import DocumentHistory from '@/components/DocumentHistory';
 import { Button } from '@/components/ui/button';
 import { parsePDF, ParsedPDF, ReportType } from '@/lib/pdf-parser';
+import { getDocumentGroup } from '@/lib/document-types';
 import { BarChart3, FlaskConical, Loader2 } from 'lucide-react';
 import { useContabilStore } from '@/stores/useContabilStore';
 import { supabase } from '@/integrations/supabase/client';
@@ -100,10 +101,10 @@ const Index = () => {
         return;
       }
 
-      // Take the most recent of each type
+      // Take the most recent of each canonical type
       const latestByType: Record<string, any> = {};
       for (const doc of docs) {
-        const key = doc.tipo.startsWith('dre') ? 'dre' : doc.tipo;
+        const key = getDocumentGroup(doc.tipo);
         if (!latestByType[key]) latestByType[key] = doc;
       }
 
@@ -198,6 +199,7 @@ const Index = () => {
       return;
     }
     setRefreshKey(k => k + 1);
+    return dadosMap.data;
   }, []);
 
   const handleFileSelected = useCallback(async (category: CategoryKey, file: File) => {
@@ -233,7 +235,13 @@ const Index = () => {
 
     // Save to database
     if (empresa) {
-      await saveDocumento(empresa.id, result, periodoFormatado);
+      const dadosParseados = await saveDocumento(empresa.id, result, periodoFormatado);
+      if (dadosParseados) {
+        const group = getDocumentGroup(result.reportType);
+        if (group === 'balanco') useContabilStore.setState({ balanco: dadosParseados, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
+        else if (group === 'dre') useContabilStore.setState({ dre: dadosParseados, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
+        else if (group === 'balancete') useContabilStore.setState({ balancete: dadosParseados, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
+      }
     }
 
     toast.success(`${file.name} processado com sucesso!`);
@@ -251,9 +259,7 @@ const Index = () => {
   };
 
   const handleLoadDocumento = (doc: any) => {
-    const cat: CategoryKey = doc.tipo === 'balanco' ? 'balanco' 
-      : doc.tipo.startsWith('dre') ? 'dre' 
-      : 'balancete';
+    const cat = getDocumentGroup(doc.tipo) as CategoryKey;
     
     const pseudoParsed: ParsedPDF = {
       fileName: doc.nome_arquivo,
@@ -270,11 +276,11 @@ const Index = () => {
       [cat]: { status: 'done', fileName: doc.nome_arquivo, parsed: pseudoParsed },
     }));
 
-    if (doc.tipo === 'balanco') {
+    if (cat === 'balanco') {
       useContabilStore.setState({ balanco: doc.dados_parseados });
-    } else if (doc.tipo.startsWith('dre')) {
+    } else if (cat === 'dre') {
       useContabilStore.setState({ dre: doc.dados_parseados });
-    } else if (doc.tipo === 'balancete') {
+    } else if (cat === 'balancete') {
       useContabilStore.setState({ balancete: doc.dados_parseados });
     }
 

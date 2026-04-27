@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { FileText, Trash2, Eye, ChevronRight, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
+import { getDocumentGroup, getDocumentGroupLabel } from '@/lib/document-types';
 
 interface Documento {
   id: string;
@@ -64,6 +65,14 @@ const DocumentHistory = ({ empresaId, onLoadDocumento, refreshKey }: DocumentHis
 
   if (!empresaId || docs.length === 0) return null;
 
+  const latestIds = new Set<string>();
+  for (const doc of docs) {
+    const group = getDocumentGroup(doc.tipo);
+    if (group !== 'desconhecido' && !Array.from(latestIds).some(id => docs.find(d => d.id === id && getDocumentGroup(d.tipo) === group))) {
+      latestIds.add(doc.id);
+    }
+  }
+
   // Group by periodo
   const grouped: Record<string, Documento[]> = {};
   for (const doc of docs) {
@@ -88,13 +97,17 @@ const DocumentHistory = ({ empresaId, onLoadDocumento, refreshKey }: DocumentHis
             </CollapsibleTrigger>
             <CollapsibleContent>
               <div className="ml-6 space-y-1 mt-1">
-                {grouped[period].map(doc => (
+                {grouped[period].map(doc => {
+                  const isLatest = latestIds.has(doc.id);
+                  const group = getDocumentGroup(doc.tipo);
+                  return (
                   <div key={doc.id} className="flex items-center gap-3 p-2 rounded-md bg-card border border-border/50 group">
                     <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-foreground truncate">{doc.nome_arquivo}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {TIPO_LABELS[doc.tipo] || doc.tipo} • {new Date(doc.created_at).toLocaleDateString('pt-BR')}
+                      <p className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
+                        <span>{TIPO_LABELS[doc.tipo] || doc.tipo} • {new Date(doc.created_at).toLocaleDateString('pt-BR')}</span>
+                        {isLatest && <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">{getDocumentGroupLabel(group)}</span>}
                       </p>
                     </div>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -106,7 +119,8 @@ const DocumentHistory = ({ empresaId, onLoadDocumento, refreshKey }: DocumentHis
                       </Button>
                     </div>
                   </div>
-                ))}
+                );
+                })}
               </div>
             </CollapsibleContent>
           </Collapsible>
