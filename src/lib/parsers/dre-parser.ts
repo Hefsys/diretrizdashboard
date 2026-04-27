@@ -71,6 +71,14 @@ function removerValoresFinais(str: string): string {
 
 type DRESection = 'receitaBruta' | 'deducoes' | 'despesasOperacionais' | null;
 
+function atualizarSecao(label: string): DRESection | undefined {
+  if (/^RECEITA\s+BRUTA/.test(label)) return 'receitaBruta';
+  if (/^DEDUCOES/.test(label)) return 'deducoes';
+  if (/^DESPESAS\s+(OPERACIONAIS|ADMINISTRATIVAS|GERAIS|COM PESSOAL|FINANCEIRAS)/.test(label)) return 'despesasOperacionais';
+  if (/RECEITA\s+LIQUIDA|LUCRO\s+BRUTO|RESULTADO\s+OPERACIONAL|LUCRO\s+LIQUIDO|RESULTADO\s+DO\s+EXERC/.test(label)) return null;
+  return undefined;
+}
+
 function escolherValorDRE(label: string, valores: string[]): string {
   if (valores.length === 1) return valores[0];
   const isLinhaResumo = /RECEITA\s+LIQUIDA|LUCRO|RESULTADO|DESPESAS\s+OPERACIONAIS|DEDUCOES|TOTAL/.test(label);
@@ -93,10 +101,10 @@ export function parseDRE(items: TextItem[], options: { debug?: boolean } = {}): 
     const labelSemValores = removerValoresFinais(txt);
     const label = normalizarLabel(labelSemValores);
 
+    const nextSection = atualizarSecao(label);
+    if (nextSection !== undefined) currentSection = nextSection;
+
     if (!valores.length) {
-      if (/^RECEITA\s+BRUTA/.test(label)) currentSection = 'receitaBruta';
-      else if (/^DEDUCOES/.test(label)) currentSection = 'deducoes';
-      else if (/^DESPESAS\s+(OPERACIONAIS|ADMINISTRATIVAS|GERAIS|COM PESSOAL|FINANCEIRAS)/.test(label)) currentSection = 'despesasOperacionais';
       continue;
     }
 
@@ -105,8 +113,13 @@ export function parseDRE(items: TextItem[], options: { debug?: boolean } = {}): 
 
     if (debug) console.log(`DRE: "${label}" → ${valor}`);
 
+    if (/RECEITA\s+LIQUIDA/.test(label)) r.receitaLiquida = pos(valor);
+    else if (/LUCRO\s+BRUTO/.test(label) || /RESULTADO\s+BRUTO/.test(label)) r.lucroBruto = pos(valor);
+    else if (/RESULTADO\s+OPERACIONAL/.test(label)) r.resultadoOperacional = valor;
+    else if (/LUCRO\s+LIQUIDO/.test(label) || /RESULTADO\s+DO\s+EXERC/.test(label) || /RESULTADO\s+LIQUIDO/.test(label)) r.lucroLiquido = valor;
+
     // Receita Bruta
-    if (/RECEITA\s*BRUTA$/.test(label) || /RECEITA\s+OPERACIONAL\s+BRUTA$/.test(label)) {
+    else if (/RECEITA\s*BRUTA$/.test(label) || /RECEITA\s+OPERACIONAL\s+BRUTA$/.test(label)) {
       r.receitaBruta = r.receitaBruta || pos(valor);
     }
     else if (
@@ -120,39 +133,33 @@ export function parseDRE(items: TextItem[], options: { debug?: boolean } = {}): 
     }
 
     // Deduções
-    else if (/DEVOLU[CÇ][AÃ]O|DEVOLUCAO/.test(label)) r.devolucoes = neg(valor);
+    else if (/DEVOLUCAO/.test(label)) r.devolucoes = neg(valor);
     else if (/ICMS\s+S/.test(label) || (/\bICMS\b/.test(label) && /\(-?\)/.test(label))) r.icms = neg(valor);
     else if (/COFINS/.test(label) && !label.includes('DESPESA')) r.cofins = neg(valor);
     else if (/\bPIS\b/.test(label) && !label.includes('DESPESA')) r.pis = neg(valor);
     else if (/SIMPLES\s+NACIONAL/.test(label)) r.outrasDeducoes = (r.outrasDeducoes || 0) + neg(valor);
-    else if (/CONTRIBUI[CÇ][AÃ]O\s+SOCIAL|CONTRIBUICAO\s+SOCIAL/.test(label)) r.csll = neg(valor);
+    else if (/CONTRIBUICAO\s+SOCIAL/.test(label)) r.csll = neg(valor);
     else if (/IMPOSTO\s+DE\s+RENDA/.test(label)) r.irpj = neg(valor);
-    else if (/SUBSTITUI[CÇ][AÃ]O|SUBSTITUICAO/.test(label)) r.st = neg(valor);
-    else if (/DEDU[CÇ][OÕ]ES|DEDUCOES/.test(label) && /TOTAL/.test(label)) r.totalDeducoes = neg(valor);
-    else if (/^[\(-]*\s*(DEDU[CÇ][OÕ]ES|DEDUCOES)/.test(label)) r.totalDeducoes = r.totalDeducoes || neg(valor);
+    else if (/SUBSTITUICAO/.test(label)) r.st = neg(valor);
+    else if (/DEDUCOES/.test(label) && /TOTAL/.test(label)) r.totalDeducoes = neg(valor);
+    else if (/^[\(-]*\s*DEDUCOES/.test(label)) r.totalDeducoes = r.totalDeducoes || neg(valor);
     else if (currentSection === 'deducoes') r.outrasDeducoes = (r.outrasDeducoes || 0) + neg(valor);
-
-    // Receita Líquida
-    else if (/RECEITA\s+L[ÍI]QUIDA/.test(label)) r.receitaLiquida = pos(valor);
 
     // CMV
     else if (/CUSTOS?\s+D[AO]S?\s+MERCADORIAS/.test(label) || /^CMV/.test(label)) r.cmv = neg(valor);
 
-    // Lucro Bruto
-    else if (/LUCRO\s+BRUTO/.test(label) || /RESULTADO\s+BRUTO/.test(label)) r.lucroBruto = pos(valor);
-
     // Despesas pessoal
-    else if (/SAL[ÁA]RIOS/.test(label)) r.salarios = neg(valor);
+    else if (/SALARIOS/.test(label)) r.salarios = neg(valor);
     else if (/PRO\s*LABORE/.test(label)) r.salarios = (r.salarios || 0) + neg(valor);
-    else if (/F[ÉE]RIAS/.test(label)) r.ferias = neg(valor);
+    else if (/FERIAS/.test(label)) r.ferias = neg(valor);
     else if (/\bINSS\b/.test(label)) r.inss = neg(valor);
     else if (/\bFGTS\b/.test(label)) r.fgts = neg(valor);
 
     // Despesas gerais
     else if (/ENERGIA/.test(label)) r.energia = neg(valor);
-    else if (/[ÁA]GUA/.test(label)) r.agua = neg(valor);
+    else if (/AGUA/.test(label)) r.agua = neg(valor);
     else if (/SEGUROS?/.test(label)) r.seguros = neg(valor);
-    else if (/SERVI[ÇC]OS|ASSISTENCIA\s+CONTABIL|CONTABIL/.test(label)) r.servicos = (r.servicos || 0) + neg(valor);
+    else if (/SERVICOS|ASSISTENCIA\s+CONTABIL|CONTABIL/.test(label)) r.servicos = (r.servicos || 0) + neg(valor);
     else if (/FRETES?/.test(label)) r.fretes = neg(valor);
     else if (/MATERI/.test(label)) r.materiais = neg(valor);
 
@@ -169,9 +176,6 @@ export function parseDRE(items: TextItem[], options: { debug?: boolean } = {}): 
     else if (/RENDIMENTOS\s+DE\s+APLICA/.test(label) || /RECEITAS\s+FINANCEIRAS/.test(label)) r.receitasFinanceiras = pos(valor);
     else if (/BONIFICA[ÇC][ÕO]ES/.test(label) || /OUTRAS\s+RECEITAS/.test(label)) r.outrasReceitas = pos(valor);
 
-    // Resultado
-    else if (/RESULTADO\s+OPERACIONAL/.test(label)) r.resultadoOperacional = valor;
-    else if (/LUCRO\s+L[ÍI]QUIDO/.test(label) || /RESULTADO\s+DO\s+EXERC/.test(label) || /RESULTADO\s+L[ÍI]QUIDO/.test(label)) r.lucroLiquido = valor;
   }
 
   // Calculate derived values
