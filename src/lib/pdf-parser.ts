@@ -32,7 +32,10 @@ const REPORT_LABELS: Record<ReportType, string> = {
 };
 
 function detectReportType(text: string): ReportType {
-  const upper = text.toUpperCase();
+  const upper = text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase();
 
   if (upper.includes('BALANÇO PATRIMONIAL') || upper.includes('BALANCO PATRIMONIAL')) {
     return 'balanco';
@@ -40,7 +43,14 @@ function detectReportType(text: string): ReportType {
   if (upper.includes('BALANCETE')) {
     return 'balancete';
   }
-  if (upper.includes('DEMONSTRAÇÃO DO RESULTADO') || upper.includes('DEMONSTRACAO DO RESULTADO')) {
+  if (
+    upper.includes('DEMONSTRACAO DO RESULTADO') ||
+    upper.includes('DEMONSTRATIVO DO RESULTADO') ||
+    upper.includes('DEMONSTRATIVO DE RESULTADO') ||
+    /\bD\s*\.?\s*R\s*\.?\s*E\b/.test(upper) ||
+    (upper.includes('RECEITA OPERACIONAL') && upper.includes('LUCRO')) ||
+    (upper.includes('RESULTADO DO EXERCICIO') && upper.includes('DESPESAS'))
+  ) {
     const hasDetailedAccounts = /\d+\.\d+\.\d+/.test(text);
     const lineCount = text.split('\n').filter(l => /\d/.test(l)).length;
     if (hasDetailedAccounts || lineCount > 30) {
