@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import { useContabilStore } from '@/stores/useContabilStore';
 import { useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Scale, FileText, BookOpen, ArrowLeft, Download, RefreshCw, Loader2 } from 'lucide-react';
+import { LayoutDashboard, Scale, FileText, BookOpen, ArrowLeft, Download, RefreshCw, Loader2, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -18,12 +18,14 @@ import VisaoGeral from '@/components/dashboard/VisaoGeral';
 import BalancoTab from '@/components/dashboard/BalancoTab';
 import DRETab from '@/components/dashboard/DRETab';
 import BalanceteTab from '@/components/dashboard/BalanceteTab';
+import HistoricoTab from '@/components/dashboard/HistoricoTab';
 
 const tabs = [
   { id: 'visao-geral', label: 'Visão Geral', icon: LayoutDashboard },
   { id: 'balanco', label: 'Balanço', icon: Scale },
   { id: 'dre', label: 'DRE', icon: FileText },
   { id: 'balancete', label: 'Balancete', icon: BookOpen },
+  { id: 'historico', label: 'Histórico', icon: History },
 ];
 
 const DashboardContent = () => {
@@ -60,6 +62,7 @@ const DashboardContent = () => {
       case 'balanco': return <BalancoTab />;
       case 'dre': return <DRETab />;
       case 'balancete': return <BalanceteTab />;
+      case 'historico': return <HistoricoTab />;
       default: return <VisaoGeral />;
     }
   };
