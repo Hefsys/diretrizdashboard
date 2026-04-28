@@ -72,6 +72,34 @@ const DRETab = () => {
   if (!dre) return <EmptyState documentName="Demonstração do Resultado (DRE)" />;
 
   const maxValue = Math.abs(dre.receitaBruta) || 1;
+  const deducoes = dre.deducoes as typeof dre.deducoes & { simplesNacional?: number; outras?: number };
+  const deducoesTotalAbs = Math.abs(deducoes.total || 0);
+  const devolucoesAbs = Math.abs(deducoes.devolucoes || 0);
+  const outrasDeducoes = deducoes.outras || 0;
+  const simplesNacional = deducoes.simplesNacional || -Math.max(deducoesTotalAbs - devolucoesAbs - Math.abs(outrasDeducoes), 0);
+  const pessoal = dre.despesasOperacionais.pessoal as typeof dre.despesasOperacionais.pessoal & { proLabore?: number };
+  const linhasPessoal = [
+    { label: 'Salários', value: pessoal.salarios },
+    { label: 'Pró-labore', value: pessoal.proLabore || 0 },
+    { label: 'Férias', value: pessoal.ferias },
+    { label: 'INSS', value: pessoal.inss },
+    { label: 'FGTS', value: pessoal.fgts },
+    { label: 'Outros', value: pessoal.outros },
+  ].filter(item => Math.abs(item.value) > 0);
+  const linhasGerais = [
+    { label: 'Energia', value: dre.despesasOperacionais.despesasGerais.energia },
+    { label: 'Água', value: dre.despesasOperacionais.despesasGerais.agua },
+    { label: 'Seguros', value: dre.despesasOperacionais.despesasGerais.seguros },
+    { label: 'Serviços / Assistência contábil', value: dre.despesasOperacionais.despesasGerais.servicos },
+    { label: 'Fretes', value: dre.despesasOperacionais.despesasGerais.fretes },
+    { label: 'Materiais', value: dre.despesasOperacionais.despesasGerais.materiais },
+    { label: 'Outros', value: dre.despesasOperacionais.despesasGerais.outros },
+  ].filter(item => Math.abs(item.value) > 0);
+  const linhasFinanceiras = [
+    { label: 'Juros', value: dre.despesasOperacionais.despesasFinanceiras.juros },
+    { label: 'Tarifas', value: dre.despesasOperacionais.despesasFinanceiras.tarifas },
+    { label: 'IOF', value: dre.despesasOperacionais.despesasFinanceiras.iof },
+  ].filter(item => Math.abs(item.value) > 0);
 
   const waterfallData = [
     { name: 'Receita Bruta', value: dre.receitaBruta, type: 'positive' },
