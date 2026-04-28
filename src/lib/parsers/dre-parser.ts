@@ -22,7 +22,7 @@ export interface DREData {
   cmv: number;
   lucroBruto: number;
   despesasOperacionais: {
-    pessoal: { salarios: number; ferias: number; inss: number; fgts: number; outros: number; total: number };
+    pessoal: { salarios: number; proLabore?: number; ferias: number; inss: number; fgts: number; outros: number; total: number };
     impostosTaxas: { icms: number; outros: number; total: number };
     despesasGerais: { energia: number; agua: number; seguros: number; servicos: number; fretes: number; materiais: number; outros: number; total: number };
     despesasFinanceiras: { juros: number; tarifas: number; iof: number; total: number };
