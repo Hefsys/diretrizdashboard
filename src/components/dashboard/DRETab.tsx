@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useContabilStore } from '@/stores/useContabilStore';
 import { formatBRL } from '@/lib/format-brl';
 import {
@@ -42,7 +43,7 @@ const DRELine = ({ label, value, indent = 0, bold = false, maxValue }: DRELinePr
 };
 
 interface DREGroupLineProps extends DRELineProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 const DREGroupLine = ({ label, value, indent = 0, bold = false, maxValue, children }: DREGroupLineProps) => (
