@@ -118,20 +118,29 @@ const DRETab = () => {
           <h3 className="font-heading font-bold text-foreground">Demonstração do Resultado do Exercício</h3>
         </div>
         <DRELine label="RECEITA OPERACIONAL BRUTA" value={dre.receitaBruta} bold maxValue={maxValue} />
-        <DRELine label="(-) Devoluções" value={-Math.abs(dre.deducoes.devolucoes)} indent={1} maxValue={maxValue} />
-        <DRELine label="(-) ICMS" value={-Math.abs(dre.deducoes.icms)} indent={1} maxValue={maxValue} />
-        <DRELine label="(-) COFINS" value={-Math.abs(dre.deducoes.cofins)} indent={1} maxValue={maxValue} />
-        <DRELine label="(-) PIS" value={-Math.abs(dre.deducoes.pis)} indent={1} maxValue={maxValue} />
-        <DRELine label="(-) Contribuição Social" value={-Math.abs(dre.deducoes.contribuicaoSocial)} indent={1} maxValue={maxValue} />
-        <DRELine label="(-) IRPJ" value={-Math.abs(dre.deducoes.impostoRenda)} indent={1} maxValue={maxValue} />
-        <DRELine label="TOTAL DEDUÇÕES" value={-Math.abs(dre.deducoes.total)} bold indent={1} maxValue={maxValue} />
+        {devolucoesAbs > 0 && <DRELine label="(-) Devoluções" value={-devolucoesAbs} indent={1} maxValue={maxValue} />}
+        {Math.abs(simplesNacional) > 0 && <DRELine label="(-) Simples Nacional" value={-Math.abs(simplesNacional)} indent={1} maxValue={maxValue} />}
+        {Math.abs(outrasDeducoes) > 0 && <DRELine label="(-) Outras deduções" value={-Math.abs(outrasDeducoes)} indent={1} maxValue={maxValue} />}
+        <DRELine label="TOTAL DEDUÇÕES" value={-deducoesTotalAbs} bold indent={1} maxValue={maxValue} />
         <DRELine label="RECEITA OPERACIONAL LÍQUIDA" value={dre.receitaLiquida} bold maxValue={maxValue} />
         <DRELine label="(-) Custo das Mercadorias Vendidas" value={-Math.abs(dre.cmv)} indent={1} maxValue={maxValue} />
         <DRELine label="LUCRO BRUTO" value={dre.lucroBruto} bold maxValue={maxValue} />
-        <DRELine label="(-) Despesas com Pessoal" value={-Math.abs(dre.despesasOperacionais.pessoal.total)} indent={1} maxValue={maxValue} />
-        <DRELine label="(-) Impostos e Taxas" value={-Math.abs(dre.despesasOperacionais.impostosTaxas.total)} indent={1} maxValue={maxValue} />
-        <DRELine label="(-) Despesas Gerais" value={-Math.abs(dre.despesasOperacionais.despesasGerais.total)} indent={1} maxValue={maxValue} />
-        <DRELine label="(-) Despesas Financeiras" value={-Math.abs(dre.despesasOperacionais.despesasFinanceiras.total)} indent={1} maxValue={maxValue} />
+        {Math.abs(dre.despesasOperacionais.pessoal.total) > 0 && (
+          <DREGroupLine label="(-) Despesas com Pessoal" value={-Math.abs(dre.despesasOperacionais.pessoal.total)} indent={1} bold maxValue={maxValue}>
+            {linhasPessoal.map(item => <DRELine key={item.label} label={item.label} value={-Math.abs(item.value)} indent={2} maxValue={maxValue} />)}
+          </DREGroupLine>
+        )}
+        {Math.abs(dre.despesasOperacionais.impostosTaxas.total) > 0 && <DRELine label="(-) Impostos e Taxas" value={-Math.abs(dre.despesasOperacionais.impostosTaxas.total)} indent={1} maxValue={maxValue} />}
+        {Math.abs(dre.despesasOperacionais.despesasGerais.total) > 0 && (
+          <DREGroupLine label="(-) Despesas Gerais" value={-Math.abs(dre.despesasOperacionais.despesasGerais.total)} indent={1} bold maxValue={maxValue}>
+            {linhasGerais.map(item => <DRELine key={item.label} label={item.label} value={-Math.abs(item.value)} indent={2} maxValue={maxValue} />)}
+          </DREGroupLine>
+        )}
+        {Math.abs(dre.despesasOperacionais.despesasFinanceiras.total) > 0 && (
+          <DREGroupLine label="(-) Despesas Financeiras" value={-Math.abs(dre.despesasOperacionais.despesasFinanceiras.total)} indent={1} bold maxValue={maxValue}>
+            {linhasFinanceiras.map(item => <DRELine key={item.label} label={item.label} value={-Math.abs(item.value)} indent={2} maxValue={maxValue} />)}
+          </DREGroupLine>
+        )}
         <DRELine label="TOTAL DESPESAS OPERACIONAIS" value={-Math.abs(dre.despesasOperacionais.total)} bold indent={1} maxValue={maxValue} />
         <DRELine label="(+) Receitas Financeiras" value={dre.receitasFinanceiras} indent={1} maxValue={maxValue} />
         <DRELine label="(+) Outras Receitas" value={dre.outrasReceitas} indent={1} maxValue={maxValue} />
