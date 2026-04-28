@@ -88,6 +88,7 @@ const Index = () => {
           balanco: null,
           dre: null,
           balancete: null,
+          empresaId,
           empresa: nome,
           cnpj: cnpj,
           periodo: '',
@@ -139,7 +140,7 @@ const Index = () => {
         useContabilStore.setState({ balancete: null });
       }
 
-      useContabilStore.setState({ empresa: nome, cnpj, periodo });
+      useContabilStore.setState({ empresaId, empresa: nome, cnpj, periodo });
       setCategories(newCategories);
 
       const loadedCount = Object.values(newCategories).filter(c => c.status === 'done').length;
@@ -238,9 +239,9 @@ const Index = () => {
       const dadosParseados = await saveDocumento(empresa.id, result, periodoFormatado);
       if (dadosParseados) {
         const group = getDocumentGroup(result.reportType);
-        if (group === 'balanco') useContabilStore.setState({ balanco: dadosParseados, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
-        else if (group === 'dre') useContabilStore.setState({ dre: dadosParseados, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
-        else if (group === 'balancete') useContabilStore.setState({ balancete: dadosParseados, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
+        if (group === 'balanco') useContabilStore.setState({ balanco: dadosParseados, empresaId: empresa.id, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
+        else if (group === 'dre') useContabilStore.setState({ dre: dadosParseados, empresaId: empresa.id, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
+        else if (group === 'balancete') useContabilStore.setState({ balancete: dadosParseados, empresaId: empresa.id, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
       }
     }
 
@@ -256,6 +257,7 @@ const Index = () => {
       const currentState = useContabilStore.getState();
       useContabilStore.setState({
         files: allParsed,
+        empresaId: selectedEmpresa?.id || currentState.empresaId,
         empresa: selectedEmpresa?.nome || currentState.empresa,
         cnpj: selectedEmpresa?.cnpj || currentState.cnpj,
         periodo: periodoFormatado,
