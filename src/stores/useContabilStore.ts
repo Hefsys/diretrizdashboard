@@ -15,6 +15,7 @@ interface ContabilState {
   balancete: BalanceteData | null;
 
   // Empresa info (from first file parsed)
+  empresaId: string;
   empresa: string;
   cnpj: string;
   periodo: string;
@@ -31,6 +32,7 @@ export const useContabilStore = create<ContabilState>((set, get) => ({
   balanco: null,
   dre: null,
   balancete: null,
+  empresaId: '',
   empresa: '',
   cnpj: '',
   periodo: '',
@@ -96,6 +98,7 @@ export const useContabilStore = create<ContabilState>((set, get) => ({
     balanco: null,
     dre: null,
     balancete: null,
+    empresaId: '',
     empresa: '',
     cnpj: '',
     periodo: '',
