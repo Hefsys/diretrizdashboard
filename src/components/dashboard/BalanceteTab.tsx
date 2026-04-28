@@ -13,19 +13,32 @@ const GROUPS = [
   { label: 'Custos/Despesas', filter: '4' },
 ];
 
+const GRAUS = [
+  { label: 'Todos os graus', value: 0 },
+  { label: '1º grau', value: 1 },
+  { label: '2º grau', value: 2 },
+  { label: '3º grau', value: 3 },
+  { label: '4º grau+', value: 4 },
+];
+
+const getGrau = (classificacao: string) => classificacao.split('.').filter(Boolean).length;
+
 const BalanceteTab = () => {
   const { balancete } = useContabilStore();
   const [search, setSearch] = useState('');
   const [group, setGroup] = useState('');
+  const [grau, setGrau] = useState(0);
 
   const filtered = useMemo(() => {
     if (!balancete) return [];
     return balancete.contas.filter((conta) => {
       const matchGroup = !group || conta.classificacao.startsWith(group);
+      const contaGrau = getGrau(conta.classificacao);
+      const matchGrau = !grau || (grau === 4 ? contaGrau >= 4 : contaGrau === grau);
       const matchSearch = !search || conta.descricao.toLowerCase().includes(search.toLowerCase()) || conta.classificacao.includes(search);
-      return matchGroup && matchSearch;
+      return matchGroup && matchGrau && matchSearch;
     });
-  }, [balancete, search, group]);
+  }, [balancete, search, group, grau]);
 
   const maxMovimento = useMemo(() => {
     return Math.max(...filtered.map(c => c.debito + c.credito), 1);
@@ -48,17 +61,26 @@ const BalanceteTab = () => {
         ))}
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Buscar por descrição ou código..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 bg-card border-border" />
         </div>
-        <div className="flex gap-2 flex-wrap">
-          {GROUPS.map((g) => (
-            <button key={g.label} onClick={() => setGroup(g.filter)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${group === g.filter ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground hover:text-foreground'}`}>
-              {g.label}
-            </button>
-          ))}
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+          <div className="flex gap-2 flex-wrap">
+            {GROUPS.map((g) => (
+              <button key={g.label} onClick={() => setGroup(g.filter)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${group === g.filter ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground hover:text-foreground'}`}>
+                {g.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {GRAUS.map((g) => (
+              <button key={g.label} onClick={() => setGrau(g.value)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${grau === g.value ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground hover:text-foreground'}`}>
+                {g.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
