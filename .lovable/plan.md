@@ -1,58 +1,31 @@
-Plano de implementação
+Plano de implementação:
 
-1. Nova aba “Histórico” no dashboard
-- Adicionar uma nova opção no menu lateral do dashboard: Histórico.
-- A aba vai carregar os documentos salvos da empresa atual e montar uma visão temporal por período.
-- Usar principalmente os documentos DRE para evolução de:
-  - Faturamento / Receita Bruta
-  - Receita Líquida
-  - Despesas Operacionais
-  - Lucro Bruto
-  - Resultado Operacional
-  - Lucro Líquido
-- Quando houver Balanço ou Balancete no mesmo período, incluir indicadores adicionais disponíveis, como Ativo Total e Resultado do Exercício.
+1. Ajustar a categoria de deduções da DRE
+- Remover da visualização principal da DRE as linhas separadas de ICMS, PIS, COFINS, IRPJ e Contribuição Social.
+- Exibir em deduções apenas:
+  - Devoluções, quando houver valor;
+  - Simples Nacional, usando o valor identificado no PDF;
+  - Outras deduções, se existir algum saldo restante não classificado;
+  - Total de deduções.
+- Atualizar o parser para guardar explicitamente o valor de Simples Nacional em `deducoes.simplesNacional`, sem depender da categoria genérica de impostos.
 
-2. Gráficos comparativos por período
-- Criar gráficos de linha para acompanhar evolução mês a mês / período a período.
-- Criar comparação ano contra ano, agrupando os períodos por ano quando houver dados suficientes.
-- Adicionar cards de resumo mostrando variação entre o período mais recente e o anterior, por exemplo:
-  - Faturamento subiu/caiu X%
-  - Despesas subiram/caíram X%
-  - Lucro subiu/caiu X%
-- Destacar “o que impactou” com uma lista simples dos maiores movimentos entre períodos, por exemplo:
-  - Aumento de despesas operacionais
-  - Queda/aumento de receita
-  - Variação de lucro bruto ou margem
+2. Criar detalhamento expansível das despesas na DRE
+- Transformar as linhas de despesas operacionais em seções clicáveis/expansíveis.
+- Ao clicar em “Despesas com Pessoal”, mostrar salários, pró-labore, férias, INSS, FGTS e outros quando houver valores.
+- Ao clicar em “Despesas Gerais”, mostrar energia, água, seguros, serviços/assistência contábil, fretes, materiais e outros.
+- Ao clicar em “Despesas Financeiras”, mostrar juros, tarifas e IOF.
+- Manter a linha “Total Despesas Operacionais” como resumo.
 
-3. Filtros da aba Histórico
-- Adicionar filtros rápidos para escolher quais métricas aparecem no gráfico:
-  - Faturamento
-  - Receita líquida
-  - Despesas
-  - Lucro bruto
-  - Resultado operacional
-  - Lucro líquido
-- Adicionar filtro de ano quando existirem múltiplos anos.
-- Ordenar os períodos corretamente por mês/ano, usando o campo `periodo` já salvo nos documentos.
+3. Atualizar gráficos e rótulos
+- Remover “Impostos/Taxas” dos gráficos de despesas quando não houver valores reais nessa categoria.
+- Padronizar os rótulos para refletirem melhor o PDF, com Simples Nacional nas deduções e despesas detalhadas por subcategoria.
 
-4. Botões de filtro de grau no Balancete
-- Manter os filtros atuais: Todos, Ativo, Passivo, Receitas, Custos/Despesas.
-- Adicionar botões de grau baseados na classificação contábil:
-  - 1º grau: contas sintéticas principais, ex.: `1`, `2`, `3`, `4`
-  - 2º grau: ex.: `1.1`, `2.1`, `4.1`
-  - 3º grau: ex.: `1.1.1`, `4.1.2`
-  - 4º grau ou mais: contas mais detalhadas
-- O filtro de grau funcionará junto com busca e grupo. Exemplo: “Ativo + 3º grau”.
+4. Preservar dados já existentes
+- Para documentos antigos que ainda não tenham `simplesNacional`, a interface calculará o valor de Simples Nacional a partir de `outrasDeducoes`/saldo de deduções quando aplicável, evitando tela zerada.
+- Documentos novos passarão a salvar o campo correto ao serem reprocessados.
 
-5. Ajustes de interface
-- Seguir o padrão visual atual da Diretriz: fundo azul escuro, vermelho primário, fonte Kanit e textos em português.
-- Usar os componentes e padrões atuais de cards, botões e gráficos Recharts já usados no dashboard.
-- Exibir estados vazios quando não houver histórico suficiente, por exemplo: “Importe DREs de períodos diferentes para comparar a evolução”.
-
-Detalhes técnicos
-- Criar um componente novo para a aba de histórico, provavelmente em `src/components/dashboard/HistoricoTab.tsx`.
-- Atualizar `src/pages/Dashboard.tsx` para incluir a nova aba.
-- Buscar os documentos da tabela `documentos` filtrando pela empresa atual e ordenando por data/período.
-- Usar os dados parseados já salvos em `dados_parseados`, sem alterar o banco de dados neste momento.
-- Se necessário, adicionar ao store apenas o identificador da empresa selecionada/atual para facilitar o carregamento do histórico no dashboard.
-- Atualizar `src/components/dashboard/BalanceteTab.tsx` com o estado de filtro de grau e a lógica para calcular o grau pela quantidade de segmentos da `classificacao`.
+Detalhes técnicos:
+- Alterar `src/lib/parsers/dre-parser.ts` para adicionar `simplesNacional` ao modelo de deduções e mapear a linha “SIMPLES NACIONAL”.
+- Alterar `src/components/dashboard/DRETab.tsx` para trocar as linhas fixas de impostos por uma estrutura dinâmica e expansível.
+- Ajustar `DistribuicaoDespesas`, `DespesasChart` e `ComparacaoGastos` para esconder categorias zeradas e evitar a categoria “Impostos/Taxas” quando ela não representa o PDF.
+- Atualizar `sample-data` e testes do parser para cobrir o caso da DRE com Simples Nacional.

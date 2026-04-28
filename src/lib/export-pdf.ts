@@ -317,7 +317,10 @@ export async function exportarPDF(
       head: [['Descrição', 'Valor']],
       body: [
         ['RECEITA BRUTA', fmtBRL(d.receitaBruta)],
-        ['(-) Deduções', fmtBRL(d.deducoes?.total)],
+        ...(Math.abs(d.deducoes?.devolucoes || 0) > 0 ? [['(-) Devoluções', fmtBRL(d.deducoes?.devolucoes)]] : []),
+        ...(Math.abs(d.deducoes?.simplesNacional || 0) > 0 ? [['(-) Simples Nacional', fmtBRL(d.deducoes?.simplesNacional)]] : []),
+        ...(Math.abs(d.deducoes?.outras || 0) > 0 ? [['(-) Outras deduções', fmtBRL(d.deducoes?.outras)]] : []),
+        ['TOTAL DEDUÇÕES', fmtBRL(d.deducoes?.total)],
         ['= RECEITA LÍQUIDA', fmtBRL(d.receitaLiquida)],
         ['(-) CMV', fmtBRL(d.cmv)],
         ['= LUCRO BRUTO', fmtBRL(d.lucroBruto)],

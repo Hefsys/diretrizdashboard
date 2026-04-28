@@ -8,19 +8,21 @@ export interface DREData {
   receitaBruta: number;
   deducoes: {
     devolucoes: number;
+    simplesNacional: number;
     icms: number;
     cofins: number;
     pis: number;
     contribuicaoSocial: number;
     impostoRenda: number;
     substituicaoTributaria: number;
+    outras: number;
     total: number;
   };
   receitaLiquida: number;
   cmv: number;
   lucroBruto: number;
   despesasOperacionais: {
-    pessoal: { salarios: number; ferias: number; inss: number; fgts: number; outros: number; total: number };
+    pessoal: { salarios: number; proLabore?: number; ferias: number; inss: number; fgts: number; outros: number; total: number };
     impostosTaxas: { icms: number; outros: number; total: number };
     despesasGerais: { energia: number; agua: number; seguros: number; servicos: number; fretes: number; materiais: number; outros: number; total: number };
     despesasFinanceiras: { juros: number; tarifas: number; iof: number; total: number };
@@ -137,7 +139,7 @@ export function parseDRE(items: TextItem[], options: { debug?: boolean } = {}): 
     else if (/ICMS\s+S/.test(label) || (/\bICMS\b/.test(label) && /\(-?\)/.test(label))) r.icms = neg(valor);
     else if (/COFINS/.test(label) && !label.includes('DESPESA')) r.cofins = neg(valor);
     else if (/\bPIS\b/.test(label) && !label.includes('DESPESA')) r.pis = neg(valor);
-    else if (/SIMPLES\s+NACIONAL/.test(label)) r.outrasDeducoes = (r.outrasDeducoes || 0) + neg(valor);
+    else if (/SIMPLES\s+NACIONAL/.test(label)) r.simplesNacional = (r.simplesNacional || 0) + neg(valor);
     else if (/CONTRIBUICAO\s+SOCIAL/.test(label)) r.csll = neg(valor);
     else if (/IMPOSTO\s+DE\s+RENDA/.test(label)) r.irpj = neg(valor);
     else if (/SUBSTITUICAO/.test(label)) r.st = neg(valor);
@@ -150,7 +152,7 @@ export function parseDRE(items: TextItem[], options: { debug?: boolean } = {}): 
 
     // Despesas pessoal
     else if (/SALARIOS/.test(label)) r.salarios = neg(valor);
-    else if (/PRO\s*LABORE/.test(label)) r.salarios = (r.salarios || 0) + neg(valor);
+    else if (/PRO\s*LABORE/.test(label)) r.proLabore = (r.proLabore || 0) + neg(valor);
     else if (/FERIAS/.test(label)) r.ferias = neg(valor);
     else if (/\bINSS\b/.test(label)) r.inss = neg(valor);
     else if (/\bFGTS\b/.test(label)) r.fgts = neg(valor);
@@ -180,13 +182,13 @@ export function parseDRE(items: TextItem[], options: { debug?: boolean } = {}): 
 
   // Calculate derived values
   const rb = r.receitaBruta || r.receitaBrutaItens || 0;
-  const deducItems = [r.devolucoes || 0, r.icms || 0, r.cofins || 0, r.pis || 0, r.csll || 0, r.irpj || 0, r.st || 0, r.outrasDeducoes || 0];
+  const deducItems = [r.devolucoes || 0, r.simplesNacional || 0, r.icms || 0, r.cofins || 0, r.pis || 0, r.csll || 0, r.irpj || 0, r.st || 0, r.outrasDeducoes || 0];
   const deducoesCalc = deducItems.reduce((a, b) => a + b, 0);
-  const totalDeducoes = deducoesCalc !== 0 ? deducoesCalc : (r.totalDeducoes || 0);
+  const totalDeducoes = r.totalDeducoes || deducoesCalc;
   const receitaLiquida = r.receitaLiquida || pos(rb + totalDeducoes);
   const lucroBruto = r.lucroBruto || pos(receitaLiquida + (r.cmv || 0));
 
-  const totalPessoal = -[r.salarios, r.ferias, r.inss, r.fgts].reduce((a, b) => a + Math.abs(b || 0), 0);
+  const totalPessoal = -[r.salarios, r.proLabore, r.ferias, r.inss, r.fgts].reduce((a, b) => a + Math.abs(b || 0), 0);
   const totalDespGerais = -[r.energia, r.agua, r.seguros, r.servicos, r.fretes, r.materiais, r.despesasGeraisOutros].reduce((a, b) => a + Math.abs(b || 0), 0);
   const totalDespFin = -[r.juros, r.tarifas, r.iof].reduce((a, b) => a + Math.abs(b || 0), 0);
   const totalDespOp = r.despesasTotal || (totalPessoal + totalDespGerais + totalDespFin);
@@ -206,19 +208,21 @@ export function parseDRE(items: TextItem[], options: { debug?: boolean } = {}): 
     receitaBruta: rb,
     deducoes: {
       devolucoes: r.devolucoes || 0,
+      simplesNacional: r.simplesNacional || 0,
       icms: r.icms || 0,
       cofins: r.cofins || 0,
       pis: r.pis || 0,
       contribuicaoSocial: r.csll || 0,
       impostoRenda: r.irpj || 0,
       substituicaoTributaria: r.st || 0,
+      outras: r.outrasDeducoes || 0,
       total: totalDeducoes,
     },
     receitaLiquida,
     cmv: r.cmv || 0,
     lucroBruto,
     despesasOperacionais: {
-      pessoal: { salarios: r.salarios || 0, ferias: r.ferias || 0, inss: r.inss || 0, fgts: r.fgts || 0, outros: 0, total: totalPessoal },
+      pessoal: { salarios: r.salarios || 0, proLabore: r.proLabore || 0, ferias: r.ferias || 0, inss: r.inss || 0, fgts: r.fgts || 0, outros: 0, total: totalPessoal },
       impostosTaxas: { icms: 0, outros: 0, total: 0 },
       despesasGerais: { energia: r.energia || 0, agua: r.agua || 0, seguros: r.seguros || 0, servicos: r.servicos || 0, fretes: r.fretes || 0, materiais: r.materiais || 0, outros: r.despesasGeraisOutros || 0, total: totalDespGerais },
       despesasFinanceiras: { juros: r.juros || 0, tarifas: r.tarifas || 0, iof: r.iof || 0, total: totalDespFin },

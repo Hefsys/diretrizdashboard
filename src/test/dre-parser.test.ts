@@ -73,10 +73,11 @@ describe('parseDRE', () => {
 
     expect(result.receitaBruta).toBe(52858.86);
     expect(result.deducoes.total).toBe(-2881.31);
+    expect(result.deducoes.simplesNacional).toBe(-2881.31);
     expect(result.receitaLiquida).toBe(49977.55);
     expect(result.despesasOperacionais.total).toBe(-4338.5);
-    expect(result.despesasOperacionais.pessoal.salarios).toBe(-3200);
-    expect(result.despesasOperacionais.despesasGerais.servicos).toBe(-4338.5);
+    expect(result.despesasOperacionais.pessoal.proLabore).toBe(-3200);
+    expect(result.despesasOperacionais.despesasGerais.servicos).toBe(-1138.5);
     expect(result.lucroLiquido).toBe(45639.05);
   });
 });
