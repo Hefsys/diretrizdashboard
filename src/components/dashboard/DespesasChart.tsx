@@ -11,7 +11,7 @@ const DespesasChart = () => {
     { name: 'Impostos/Taxas', value: Math.abs(desp?.impostosTaxas.total ?? 0), fill: '#f59e0b' },
     { name: 'Desp. Gerais', value: Math.abs(desp?.despesasGerais.total ?? 0), fill: '#8b5cf6' },
     { name: 'Desp. Financeiras', value: Math.abs(desp?.despesasFinanceiras.total ?? 0), fill: '#ef4444' },
-  ];
+  ].filter(item => item.value > 0);
 
   return (
     <div className="bg-card rounded-xl border border-border p-5">
