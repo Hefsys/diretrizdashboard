@@ -46,25 +46,32 @@ interface DREGroupLineProps extends DRELineProps {
   children: ReactNode;
 }
 
-const DREGroupLine = ({ label, value, indent = 0, bold = false, maxValue, children }: DREGroupLineProps) => (
-  <Collapsible>
-    <CollapsibleTrigger className="group w-full text-left">
-      <div
-        className={`flex items-center gap-3 py-2 px-4 border-b border-border/50 hover:bg-secondary/20 transition-colors ${bold ? 'bg-secondary/10' : ''}`}
-        style={{ paddingLeft: `${16 + indent * 20}px` }}
-      >
-        <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-        <span className={`flex-1 text-sm ${bold ? 'font-heading font-semibold text-foreground' : 'text-muted-foreground'}`}>
-          {label}
-        </span>
-        <span className={`text-sm tabular-nums min-w-[130px] text-right ${bold ? 'font-heading font-bold' : 'font-medium'} ${value < 0 ? 'text-destructive' : 'text-accent'}`}>
-          {formatBRL(value)}
-        </span>
-      </div>
-    </CollapsibleTrigger>
-    <CollapsibleContent>{children}</CollapsibleContent>
-  </Collapsible>
-);
+const DREGroupLine = ({ label, value, indent = 0, bold = false, maxValue, children }: DREGroupLineProps) => {
+  const barWidth = maxValue !== 0 ? (Math.abs(value) / maxValue) * 100 : 0;
+
+  return (
+    <Collapsible>
+      <CollapsibleTrigger className="group w-full text-left">
+        <div
+          className={`flex items-center gap-3 py-2 px-4 border-b border-border/50 hover:bg-secondary/20 transition-colors ${bold ? 'bg-secondary/10' : ''}`}
+          style={{ paddingLeft: `${16 + indent * 20}px` }}
+        >
+          <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+          <span className={`flex-1 text-sm ${bold ? 'font-heading font-semibold text-foreground' : 'text-muted-foreground'}`}>
+            {label}
+          </span>
+          <div className="w-32 h-2 bg-secondary/30 rounded-full overflow-hidden hidden sm:block">
+            <div className="h-full rounded-full bg-destructive/60 transition-all duration-700" style={{ width: `${Math.min(barWidth, 100)}%` }} />
+          </div>
+          <span className={`text-sm tabular-nums min-w-[130px] text-right ${bold ? 'font-heading font-bold' : 'font-medium'} ${value < 0 ? 'text-destructive' : 'text-accent'}`}>
+            {formatBRL(value)}
+          </span>
+        </div>
+      </CollapsibleTrigger>
+      <CollapsibleContent>{children}</CollapsibleContent>
+    </Collapsible>
+  );
+};
 
 const DRETab = () => {
   const { dre } = useContabilStore();
