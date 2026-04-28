@@ -23,6 +23,17 @@ interface HistoricoPonto {
   resultadoBalancete?: number;
 }
 
+type DadosParseados = {
+  receitaBruta?: number;
+  receitaLiquida?: number;
+  despesasOperacionais?: { total?: number };
+  lucroBruto?: number;
+  resultadoOperacional?: number;
+  lucroLiquido?: number;
+  ativo?: { total?: number };
+  resumo?: { resultadoExercicio?: number };
+};
+
 const METRICS: { key: MetricKey; label: string; color: string }[] = [
   { key: 'receitaBruta', label: 'Faturamento', color: 'hsl(var(--primary))' },
   { key: 'receitaLiquida', label: 'Receita líquida', color: 'hsl(var(--accent))' },
@@ -85,7 +96,7 @@ const HistoricoTab = () => {
           lucroLiquido: 0,
         };
 
-        const dados = doc.dados_parseados as any;
+        const dados = doc.dados_parseados as DadosParseados | null;
         const group = getDocumentGroup(doc.tipo);
         if (group === 'dre') {
           atual.receitaBruta = Number(dados?.receitaBruta || 0);
