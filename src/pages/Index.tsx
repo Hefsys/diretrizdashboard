@@ -363,6 +363,7 @@ const Index = () => {
             onFileSelected={(f) => handleFileSelected('balanco', f)}
             status={categories.balanco.status}
             fileName={categories.balanco.fileName}
+            onOpenPdf={() => categories.balanco.localPdfUrl ? window.open(categories.balanco.localPdfUrl, '_blank', 'noopener,noreferrer') : openPdfPath(categories.balanco.arquivoPath)}
             disabled={isProcessing || loadingEmpresa}
           />
           <CategoryDropZone
@@ -372,6 +373,7 @@ const Index = () => {
             onFileSelected={(f) => handleFileSelected('dre', f)}
             status={categories.dre.status}
             fileName={categories.dre.fileName}
+            onOpenPdf={() => categories.dre.localPdfUrl ? window.open(categories.dre.localPdfUrl, '_blank', 'noopener,noreferrer') : openPdfPath(categories.dre.arquivoPath)}
             disabled={isProcessing || loadingEmpresa}
           />
           <CategoryDropZone
@@ -381,6 +383,7 @@ const Index = () => {
             onFileSelected={(f) => handleFileSelected('balancete', f)}
             status={categories.balancete.status}
             fileName={categories.balancete.fileName}
+            onOpenPdf={() => categories.balancete.localPdfUrl ? window.open(categories.balancete.localPdfUrl, '_blank', 'noopener,noreferrer') : openPdfPath(categories.balancete.arquivoPath)}
             disabled={isProcessing || loadingEmpresa}
           />
         </div>
@@ -389,6 +392,7 @@ const Index = () => {
         <DocumentHistory
           empresaId={selectedEmpresa?.id || null}
           onLoadDocumento={handleLoadDocumento}
+          onOpenPdf={(doc) => openPdfPath(doc.arquivo_path)}
           refreshKey={refreshKey}
         />
 
