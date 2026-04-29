@@ -5,6 +5,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { FileText, Trash2, Eye, ChevronRight, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { getDocumentGroup, getDocumentGroupLabel } from '@/lib/document-types';
+import { Json } from '@/integrations/supabase/types';
 
 interface Documento {
   id: string;
@@ -13,7 +14,7 @@ interface Documento {
   arquivo_path: string | null;
   periodo: string | null;
   created_at: string;
-  dados_parseados: any;
+  dados_parseados: Json;
 }
 
 const TIPO_LABELS: Record<string, string> = {
