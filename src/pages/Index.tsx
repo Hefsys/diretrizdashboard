@@ -8,6 +8,9 @@ import DocumentHistory from '@/components/DocumentHistory';
 import { Button } from '@/components/ui/button';
 import { parsePDF, ParsedPDF, ReportType } from '@/lib/pdf-parser';
 import { getDocumentGroup } from '@/lib/document-types';
+import { BalancoData } from '@/lib/parsers/balanco-parser';
+import { BalanceteData } from '@/lib/parsers/balancete-parser';
+import { DREData } from '@/lib/parsers/dre-parser';
 import { BarChart3, FlaskConical, Loader2 } from 'lucide-react';
 import { useContabilStore } from '@/stores/useContabilStore';
 import { supabase } from '@/integrations/supabase/client';
@@ -28,6 +31,18 @@ interface CategoryState {
   localPdfUrl?: string;
   parsed?: ParsedPDF;
 }
+
+type DocumentoRow = {
+  id: string;
+  tipo: ReportType;
+  nome_arquivo: string;
+  arquivo_path: string | null;
+  periodo: string | null;
+  dados_parseados: unknown;
+  created_at: string;
+};
+
+type ParsedDocumentoData = BalancoData | DREData | BalanceteData | Record<string, never>;
 
 const CATEGORY_TYPES: Record<CategoryKey, ReportType[]> = {
   balanco: ['balanco'],
@@ -105,9 +120,9 @@ const Index = () => {
       }
 
       // Take the most recent of each canonical type
-      const latestByType: Record<string, any> = {};
+      const latestByType: Partial<Record<CategoryKey, DocumentoRow>> = {};
       for (const doc of docs) {
-        const key = getDocumentGroup(doc.tipo);
+        const key = getDocumentGroup(doc.tipo) as CategoryKey;
         if (!latestByType[key]) latestByType[key] = doc;
       }
 
@@ -119,7 +134,7 @@ const Index = () => {
       };
 
       if (latestByType.balanco) {
-        useContabilStore.setState({ balanco: latestByType.balanco.dados_parseados as any });
+        useContabilStore.setState({ balanco: latestByType.balanco.dados_parseados as BalancoData });
         newCategories.balanco = { status: 'done', fileName: latestByType.balanco.nome_arquivo, arquivoPath: latestByType.balanco.arquivo_path };
         periodo = latestByType.balanco.periodo || periodo;
       } else {
@@ -127,7 +142,7 @@ const Index = () => {
       }
 
       if (latestByType.dre) {
-        useContabilStore.setState({ dre: latestByType.dre.dados_parseados as any });
+        useContabilStore.setState({ dre: latestByType.dre.dados_parseados as DREData });
         newCategories.dre = { status: 'done', fileName: latestByType.dre.nome_arquivo, arquivoPath: latestByType.dre.arquivo_path };
         periodo = latestByType.dre.periodo || periodo;
       } else {
@@ -135,7 +150,7 @@ const Index = () => {
       }
 
       if (latestByType.balancete) {
-        useContabilStore.setState({ balancete: latestByType.balancete.dados_parseados as any });
+        useContabilStore.setState({ balancete: latestByType.balancete.dados_parseados as BalanceteData });
         newCategories.balancete = { status: 'done', fileName: latestByType.balancete.nome_arquivo, arquivoPath: latestByType.balancete.arquivo_path };
         periodo = latestByType.balancete.periodo || periodo;
       } else {
@@ -192,7 +207,7 @@ const Index = () => {
     if (!user) return;
     let arquivoPath: string | null = null;
 
-    const dadosMap: Record<string, any> = {};
+    const dadosMap: { data?: ParsedDocumentoData } = {};
     if (parsed.reportType === 'balanco') {
       const { parseBalanco } = await import('@/lib/parsers/balanco-parser');
       dadosMap.data = parseBalanco(parsed.textItems);
@@ -219,7 +234,7 @@ const Index = () => {
       periodo: periodo,
       dados_parseados: dadosMap.data || {},
       user_id: user.id,
-    } as any);
+    });
     if (error) {
       console.error('Erro ao salvar documento:', error);
       toast.error('Erro ao salvar documento no banco de dados');
@@ -294,7 +309,7 @@ const Index = () => {
     navigate('/dashboard');
   };
 
-  const handleLoadDocumento = (doc: any) => {
+  const handleLoadDocumento = (doc: DocumentoRow) => {
     const cat = getDocumentGroup(doc.tipo) as CategoryKey;
     
     const pseudoParsed: ParsedPDF = {
@@ -313,11 +328,11 @@ const Index = () => {
     }));
 
     if (cat === 'balanco') {
-      useContabilStore.setState({ balanco: doc.dados_parseados });
+      useContabilStore.setState({ balanco: doc.dados_parseados as BalancoData });
     } else if (cat === 'dre') {
-      useContabilStore.setState({ dre: doc.dados_parseados });
+      useContabilStore.setState({ dre: doc.dados_parseados as DREData });
     } else if (cat === 'balancete') {
-      useContabilStore.setState({ balancete: doc.dados_parseados });
+      useContabilStore.setState({ balancete: doc.dados_parseados as BalanceteData });
     }
 
     toast.success(`${doc.nome_arquivo} carregado do histórico`);
