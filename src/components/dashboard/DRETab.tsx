@@ -81,9 +81,17 @@ const DRETab = () => {
   const maxValue = Math.abs(dre.receitaBruta) || 1;
   const deducoes = dre.deducoes as typeof dre.deducoes & { simplesNacional?: number; outras?: number };
   const deducoesTotalAbs = Math.abs(deducoes.total || 0);
-  const devolucoesAbs = Math.abs(deducoes.devolucoes || 0);
-  const outrasDeducoes = deducoes.outras || 0;
-  const simplesNacional = deducoes.simplesNacional || -Math.max(deducoesTotalAbs - devolucoesAbs - Math.abs(outrasDeducoes), 0);
+  const linhasDeducoes = [
+    { label: '(-) Devoluções', value: deducoes.devolucoes },
+    { label: '(-) Simples Nacional', value: deducoes.simplesNacional || 0 },
+    { label: '(-) ICMS', value: deducoes.icms },
+    { label: '(-) PIS', value: deducoes.pis },
+    { label: '(-) COFINS', value: deducoes.cofins },
+    { label: '(-) IRPJ', value: deducoes.impostoRenda },
+    { label: '(-) Contribuição Social / CSLL', value: deducoes.contribuicaoSocial },
+    { label: '(-) Substituição Tributária', value: deducoes.substituicaoTributaria },
+    { label: '(-) Outras deduções', value: deducoes.outras || 0 },
+  ].filter(item => Math.abs(item.value || 0) > 0);
   const pessoal = dre.despesasOperacionais.pessoal as typeof dre.despesasOperacionais.pessoal & { proLabore?: number };
   const linhasPessoal = [
     { label: 'Salários', value: pessoal.salarios },
@@ -125,9 +133,9 @@ const DRETab = () => {
           <h3 className="font-heading font-bold text-foreground">Demonstração do Resultado do Exercício</h3>
         </div>
         <DRELine label="RECEITA OPERACIONAL BRUTA" value={dre.receitaBruta} bold maxValue={maxValue} />
-        {devolucoesAbs > 0 && <DRELine label="(-) Devoluções" value={-devolucoesAbs} indent={1} maxValue={maxValue} />}
-        {Math.abs(simplesNacional) > 0 && <DRELine label="(-) Simples Nacional" value={-Math.abs(simplesNacional)} indent={1} maxValue={maxValue} />}
-        {Math.abs(outrasDeducoes) > 0 && <DRELine label="(-) Outras deduções" value={-Math.abs(outrasDeducoes)} indent={1} maxValue={maxValue} />}
+        {linhasDeducoes.map(item => (
+          <DRELine key={item.label} label={item.label} value={-Math.abs(item.value || 0)} indent={1} maxValue={maxValue} />
+        ))}
         <DRELine label="TOTAL DEDUÇÕES" value={-deducoesTotalAbs} bold indent={1} maxValue={maxValue} />
         <DRELine label="RECEITA OPERACIONAL LÍQUIDA" value={dre.receitaLiquida} bold maxValue={maxValue} />
         <DRELine label="(-) Custo das Mercadorias Vendidas" value={-Math.abs(dre.cmv)} indent={1} maxValue={maxValue} />
