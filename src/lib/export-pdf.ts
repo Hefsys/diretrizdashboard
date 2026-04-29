@@ -180,6 +180,23 @@ export async function exportarPDF(
     });
   }
 
+  function getDeducoesRows(d: DREData): string[][] {
+    const ded = d.deducoes;
+    return [
+      { label: '(-) Devoluções', value: ded?.devolucoes || 0 },
+      { label: '(-) Simples Nacional', value: ded?.simplesNacional || 0 },
+      { label: '(-) ICMS', value: ded?.icms || 0 },
+      { label: '(-) PIS', value: ded?.pis || 0 },
+      { label: '(-) COFINS', value: ded?.cofins || 0 },
+      { label: '(-) IRPJ', value: ded?.impostoRenda || 0 },
+      { label: '(-) Contribuição Social / CSLL', value: ded?.contribuicaoSocial || 0 },
+      { label: '(-) Substituição Tributária', value: ded?.substituicaoTributaria || 0 },
+      { label: '(-) Outras deduções', value: ded?.outras || 0 },
+    ]
+      .filter(item => Math.abs(item.value) > 0)
+      .map(item => [item.label, fmtBRL(item.value)]);
+  }
+
   const tableStyles = {
     theme: 'plain' as const,
     styles: { fillColor: C.bgCard as any, textColor: C.gray as any, fontSize: 8, cellPadding: 2 },
@@ -317,9 +334,7 @@ export async function exportarPDF(
       head: [['Descrição', 'Valor']],
       body: [
         ['RECEITA BRUTA', fmtBRL(d.receitaBruta)],
-        ...(Math.abs(d.deducoes?.devolucoes || 0) > 0 ? [['(-) Devoluções', fmtBRL(d.deducoes?.devolucoes)]] : []),
-        ...(Math.abs(d.deducoes?.simplesNacional || 0) > 0 ? [['(-) Simples Nacional', fmtBRL(d.deducoes?.simplesNacional)]] : []),
-        ...(Math.abs(d.deducoes?.outras || 0) > 0 ? [['(-) Outras deduções', fmtBRL(d.deducoes?.outras)]] : []),
+        ...getDeducoesRows(d),
         ['TOTAL DEDUÇÕES', fmtBRL(d.deducoes?.total)],
         ['= RECEITA LÍQUIDA', fmtBRL(d.receitaLiquida)],
         ['(-) CMV', fmtBRL(d.cmv)],
