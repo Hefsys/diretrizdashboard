@@ -35,7 +35,7 @@ interface CategoryState {
 
 type DocumentoRow = {
   id: string;
-  tipo: ReportType;
+  tipo: string;
   nome_arquivo: string;
   arquivo_path: string | null;
   periodo: string | null;
@@ -315,7 +315,7 @@ const Index = () => {
     
     const pseudoParsed: ParsedPDF = {
       fileName: doc.nome_arquivo,
-      reportType: doc.tipo,
+      reportType: doc.tipo as ReportType,
       reportTypeLabel: doc.tipo,
       rawText: '',
       textItems: [],
