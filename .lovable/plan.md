@@ -1,31 +1,43 @@
-Plano de implementação:
+Plano de ajuste:
 
-1. Ajustar a categoria de deduções da DRE
-- Remover da visualização principal da DRE as linhas separadas de ICMS, PIS, COFINS, IRPJ e Contribuição Social.
-- Exibir em deduções apenas:
-  - Devoluções, quando houver valor;
-  - Simples Nacional, usando o valor identificado no PDF;
-  - Outras deduções, se existir algum saldo restante não classificado;
-  - Total de deduções.
-- Atualizar o parser para guardar explicitamente o valor de Simples Nacional em `deducoes.simplesNacional`, sem depender da categoria genérica de impostos.
+1. Fazer a DRE respeitar o regime/categorias de cada documento
+- A tela não vai assumir que toda empresa é Simples Nacional.
+- “Simples Nacional” só aparecerá quando o PDF/documento trouxer essa categoria ou quando o dado salvo já tiver esse campo preenchido.
+- Empresas que tiverem ICMS, PIS, COFINS, IRPJ, CSLL, substituição tributária ou outras deduções continuarão vendo essas categorias quando elas existirem no documento.
+- Remover o fallback atual que transforma automaticamente o saldo total de deduções em “Simples Nacional”, pois isso pode classificar errado empresas que não são do Simples.
 
-2. Criar detalhamento expansível das despesas na DRE
-- Transformar as linhas de despesas operacionais em seções clicáveis/expansíveis.
-- Ao clicar em “Despesas com Pessoal”, mostrar salários, pró-labore, férias, INSS, FGTS e outros quando houver valores.
-- Ao clicar em “Despesas Gerais”, mostrar energia, água, seguros, serviços/assistência contábil, fretes, materiais e outros.
-- Ao clicar em “Despesas Financeiras”, mostrar juros, tarifas e IOF.
-- Manter a linha “Total Despesas Operacionais” como resumo.
+2. Mostrar as deduções com os mesmos nomes das categorias encontradas
+- A seção de deduções será montada dinamicamente a partir dos valores reais parseados:
+  - Devoluções;
+  - Simples Nacional;
+  - ICMS;
+  - PIS;
+  - COFINS;
+  - IRPJ;
+  - Contribuição Social/CSLL;
+  - Substituição Tributária;
+  - Outras deduções.
+- Linhas zeradas não serão exibidas.
+- O total de deduções permanecerá como resumo.
 
-3. Atualizar gráficos e rótulos
-- Remover “Impostos/Taxas” dos gráficos de despesas quando não houver valores reais nessa categoria.
-- Padronizar os rótulos para refletirem melhor o PDF, com Simples Nacional nas deduções e despesas detalhadas por subcategoria.
+3. Preservar detalhamento expansível das despesas sem forçar categorias inexistentes
+- Manter as despesas expansíveis, mas só exibir subcategorias realmente identificadas no documento.
+- Se o documento trouxer despesas específicas, elas aparecem dentro do grupo correspondente.
+- Se houver valor não classificado, ele fica em “Outros”, sem inventar uma categoria como “Impostos/Taxas” quando não existir no documento.
 
-4. Preservar dados já existentes
-- Para documentos antigos que ainda não tenham `simplesNacional`, a interface calculará o valor de Simples Nacional a partir de `outrasDeducoes`/saldo de deduções quando aplicável, evitando tela zerada.
-- Documentos novos passarão a salvar o campo correto ao serem reprocessados.
+4. Ajustar exportação em PDF e gráficos
+- O PDF exportado seguirá a mesma lógica da tela: categorias de deduções conforme o documento, não somente “Simples Nacional”.
+- Gráficos continuarão escondendo categorias zeradas.
+- “Impostos/Taxas” em despesas só aparecerá se houver valor real nessa categoria.
+
+5. Atualizar dados de exemplo e testes
+- Ajustar o `sample-data` para não induzir a tela a mostrar Simples Nacional em todos os casos.
+- Incluir/ajustar testes cobrindo dois cenários:
+  - empresa do Simples Nacional com linha “Simples Nacional” no documento;
+  - empresa fora do Simples com impostos separados, mantendo as categorias originais.
 
 Detalhes técnicos:
-- Alterar `src/lib/parsers/dre-parser.ts` para adicionar `simplesNacional` ao modelo de deduções e mapear a linha “SIMPLES NACIONAL”.
-- Alterar `src/components/dashboard/DRETab.tsx` para trocar as linhas fixas de impostos por uma estrutura dinâmica e expansível.
-- Ajustar `DistribuicaoDespesas`, `DespesasChart` e `ComparacaoGastos` para esconder categorias zeradas e evitar a categoria “Impostos/Taxas” quando ela não representa o PDF.
-- Atualizar `sample-data` e testes do parser para cobrir o caso da DRE com Simples Nacional.
+- Alterar `src/components/dashboard/DRETab.tsx` para criar uma lista dinâmica de deduções a partir de `dre.deducoes`, sem fallback automático para Simples Nacional.
+- Alterar `src/lib/export-pdf.ts` para exportar a mesma lista dinâmica de deduções.
+- Revisar `src/lib/parsers/dre-parser.ts` apenas se necessário para garantir que impostos separados e Simples Nacional sejam guardados em campos próprios, sem sobrescrever categorias.
+- Atualizar `src/lib/sample-data.ts` e `src/test/dre-parser.test.ts` para refletir os dois tipos de documento.

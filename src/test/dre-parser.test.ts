@@ -80,4 +80,31 @@ describe('parseDRE', () => {
     expect(result.despesasOperacionais.despesasGerais.servicos).toBe(-1138.5);
     expect(result.lucroLiquido).toBe(45639.05);
   });
+
+  it('mantém impostos separados quando o documento não é do Simples Nacional', () => {
+    const items = makeItems([
+      ['EMPRESA LUCRO PRESUMIDO LTDA'],
+      ['CNPJ 98.765.432/0001-10'],
+      ['RECEITA BRUTA', '100.000,00'],
+      ['DEDUÇÕES'],
+      ['ICMS', '(5.000,00)'],
+      ['PIS', '(650,00)'],
+      ['COFINS', '(3.000,00)'],
+      ['IRPJ', '(1.200,00)'],
+      ['CSLL', '(1.080,00)'],
+      ['RECEITA LÍQUIDA', '89.070,00'],
+      ['LUCRO BRUTO', '89.070,00'],
+      ['LUCRO LÍQUIDO DO EXERCÍCIO', '89.070,00'],
+    ]);
+
+    const result = parseDRE(items, { debug: false });
+
+    expect(result.deducoes.simplesNacional).toBe(0);
+    expect(result.deducoes.icms).toBe(-5000);
+    expect(result.deducoes.pis).toBe(-650);
+    expect(result.deducoes.cofins).toBe(-3000);
+    expect(result.deducoes.impostoRenda).toBe(-1200);
+    expect(result.deducoes.contribuicaoSocial).toBe(-1080);
+    expect(result.deducoes.total).toBe(-10930);
+  });
 });
