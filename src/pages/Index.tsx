@@ -120,7 +120,7 @@ const Index = () => {
 
       if (latestByType.balanco) {
         useContabilStore.setState({ balanco: latestByType.balanco.dados_parseados as any });
-        newCategories.balanco = { status: 'done', fileName: latestByType.balanco.nome_arquivo };
+        newCategories.balanco = { status: 'done', fileName: latestByType.balanco.nome_arquivo, arquivoPath: latestByType.balanco.arquivo_path };
         periodo = latestByType.balanco.periodo || periodo;
       } else {
         useContabilStore.setState({ balanco: null });
@@ -128,7 +128,7 @@ const Index = () => {
 
       if (latestByType.dre) {
         useContabilStore.setState({ dre: latestByType.dre.dados_parseados as any });
-        newCategories.dre = { status: 'done', fileName: latestByType.dre.nome_arquivo };
+        newCategories.dre = { status: 'done', fileName: latestByType.dre.nome_arquivo, arquivoPath: latestByType.dre.arquivo_path };
         periodo = latestByType.dre.periodo || periodo;
       } else {
         useContabilStore.setState({ dre: null });
@@ -136,7 +136,7 @@ const Index = () => {
 
       if (latestByType.balancete) {
         useContabilStore.setState({ balancete: latestByType.balancete.dados_parseados as any });
-        newCategories.balancete = { status: 'done', fileName: latestByType.balancete.nome_arquivo };
+        newCategories.balancete = { status: 'done', fileName: latestByType.balancete.nome_arquivo, arquivoPath: latestByType.balancete.arquivo_path };
         periodo = latestByType.balancete.periodo || periodo;
       } else {
         useContabilStore.setState({ balancete: null });
@@ -309,7 +309,7 @@ const Index = () => {
 
     setCategories(prev => ({
       ...prev,
-      [cat]: { status: 'done', fileName: doc.nome_arquivo, parsed: pseudoParsed },
+      [cat]: { status: 'done', fileName: doc.nome_arquivo, parsed: pseudoParsed, arquivoPath: doc.arquivo_path },
     }));
 
     if (cat === 'balanco') {
