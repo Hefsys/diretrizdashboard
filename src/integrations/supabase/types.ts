@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       documentos: {
         Row: {
+          arquivo_path: string | null
           created_at: string
           dados_parseados: Json
           empresa_id: string
@@ -26,6 +27,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          arquivo_path?: string | null
           created_at?: string
           dados_parseados?: Json
           empresa_id: string
@@ -36,6 +38,7 @@ export type Database = {
           user_id?: string
         }
         Update: {
+          arquivo_path?: string | null
           created_at?: string
           dados_parseados?: Json
           empresa_id?: string

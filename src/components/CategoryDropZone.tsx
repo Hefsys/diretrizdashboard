@@ -1,6 +1,7 @@
 import { useCallback, useState, useRef } from 'react';
-import { Upload, FileCheck, AlertCircle, Loader2 } from 'lucide-react';
+import { Upload, FileCheck, AlertCircle, Loader2, Eye } from 'lucide-react';
 import { ReportType } from '@/lib/pdf-parser';
+import { Button } from '@/components/ui/button';
 
 interface CategoryDropZoneProps {
   title: string;
@@ -10,6 +11,7 @@ interface CategoryDropZoneProps {
   status: 'idle' | 'processing' | 'done' | 'error';
   fileName?: string;
   disabled?: boolean;
+  onOpenPdf?: () => void;
 }
 
 const CategoryDropZone = ({
@@ -19,6 +21,7 @@ const CategoryDropZone = ({
   status,
   fileName,
   disabled,
+  onOpenPdf,
 }: CategoryDropZoneProps) => {
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -90,6 +93,21 @@ const CategoryDropZone = ({
         <p className="text-xs text-muted-foreground truncate max-w-full px-2">
           {fileName}
         </p>
+      )}
+      {status === 'done' && onOpenPdf && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8 gap-2 text-xs"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenPdf();
+          }}
+        >
+          <Eye className="w-3.5 h-3.5" />
+          Ver PDF
+        </Button>
       )}
       <input
         ref={inputRef}

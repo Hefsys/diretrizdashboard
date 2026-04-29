@@ -8,9 +8,13 @@ import DocumentHistory from '@/components/DocumentHistory';
 import { Button } from '@/components/ui/button';
 import { parsePDF, ParsedPDF, ReportType } from '@/lib/pdf-parser';
 import { getDocumentGroup } from '@/lib/document-types';
+import { BalancoData } from '@/lib/parsers/balanco-parser';
+import { BalanceteData } from '@/lib/parsers/balancete-parser';
+import { DREData } from '@/lib/parsers/dre-parser';
 import { BarChart3, FlaskConical, Loader2 } from 'lucide-react';
 import { useContabilStore } from '@/stores/useContabilStore';
 import { supabase } from '@/integrations/supabase/client';
+import { Json } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 
 interface Empresa {
@@ -24,8 +28,22 @@ type CategoryKey = 'balanco' | 'dre' | 'balancete';
 interface CategoryState {
   status: 'idle' | 'processing' | 'done' | 'error';
   fileName?: string;
+  arquivoPath?: string | null;
+  localPdfUrl?: string;
   parsed?: ParsedPDF;
 }
+
+type DocumentoRow = {
+  id: string;
+  tipo: string;
+  nome_arquivo: string;
+  arquivo_path: string | null;
+  periodo: string | null;
+  dados_parseados: unknown;
+  created_at: string;
+};
+
+type ParsedDocumentoData = BalancoData | DREData | BalanceteData | Record<string, never>;
 
 const CATEGORY_TYPES: Record<CategoryKey, ReportType[]> = {
   balanco: ['balanco'],
@@ -103,10 +121,10 @@ const Index = () => {
       }
 
       // Take the most recent of each canonical type
-      const latestByType: Record<string, any> = {};
+      const latestByType: Partial<Record<CategoryKey, DocumentoRow>> = {};
       for (const doc of docs) {
-        const key = getDocumentGroup(doc.tipo);
-        if (!latestByType[key]) latestByType[key] = doc;
+        const key = getDocumentGroup(doc.tipo) as CategoryKey;
+        if (!latestByType[key]) latestByType[key] = doc as DocumentoRow;
       }
 
       let periodo = '';
@@ -117,24 +135,24 @@ const Index = () => {
       };
 
       if (latestByType.balanco) {
-        useContabilStore.setState({ balanco: latestByType.balanco.dados_parseados as any });
-        newCategories.balanco = { status: 'done', fileName: latestByType.balanco.nome_arquivo };
+        useContabilStore.setState({ balanco: latestByType.balanco.dados_parseados as BalancoData });
+        newCategories.balanco = { status: 'done', fileName: latestByType.balanco.nome_arquivo, arquivoPath: latestByType.balanco.arquivo_path };
         periodo = latestByType.balanco.periodo || periodo;
       } else {
         useContabilStore.setState({ balanco: null });
       }
 
       if (latestByType.dre) {
-        useContabilStore.setState({ dre: latestByType.dre.dados_parseados as any });
-        newCategories.dre = { status: 'done', fileName: latestByType.dre.nome_arquivo };
+        useContabilStore.setState({ dre: latestByType.dre.dados_parseados as DREData });
+        newCategories.dre = { status: 'done', fileName: latestByType.dre.nome_arquivo, arquivoPath: latestByType.dre.arquivo_path };
         periodo = latestByType.dre.periodo || periodo;
       } else {
         useContabilStore.setState({ dre: null });
       }
 
       if (latestByType.balancete) {
-        useContabilStore.setState({ balancete: latestByType.balancete.dados_parseados as any });
-        newCategories.balancete = { status: 'done', fileName: latestByType.balancete.nome_arquivo };
+        useContabilStore.setState({ balancete: latestByType.balancete.dados_parseados as BalanceteData });
+        newCategories.balancete = { status: 'done', fileName: latestByType.balancete.nome_arquivo, arquivoPath: latestByType.balancete.arquivo_path };
         periodo = latestByType.balancete.periodo || periodo;
       } else {
         useContabilStore.setState({ balancete: null });
@@ -170,11 +188,27 @@ const Index = () => {
     return created;
   }, []);
 
-  const saveDocumento = useCallback(async (empresaId: string, parsed: ParsedPDF, periodo: string) => {
+  const uploadPdf = useCallback(async (empresaId: string, file: File, userId: string) => {
+    const safeName = file.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9._-]/g, '-');
+    const path = `${userId}/${empresaId}/${crypto.randomUUID()}-${safeName}`;
+    const { error } = await supabase.storage.from('documentos-pdf').upload(path, file, { contentType: 'application/pdf' });
+    if (error) throw error;
+    return path;
+  }, []);
+
+  const openPdfPath = useCallback(async (path?: string | null) => {
+    if (!path) { toast.info('PDF original não está disponível para este documento'); return; }
+    const { data, error } = await supabase.storage.from('documentos-pdf').createSignedUrl(path, 60 * 10);
+    if (error || !data?.signedUrl) { toast.error('Não foi possível abrir o PDF'); return; }
+    window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+  }, []);
+
+  const saveDocumento = useCallback(async (empresaId: string, parsed: ParsedPDF, periodo: string, file: File) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+    let arquivoPath: string | null = null;
 
-    const dadosMap: Record<string, any> = {};
+    const dadosMap: { data?: ParsedDocumentoData } = {};
     if (parsed.reportType === 'balanco') {
       const { parseBalanco } = await import('@/lib/parsers/balanco-parser');
       dadosMap.data = parseBalanco(parsed.textItems);
@@ -186,12 +220,20 @@ const Index = () => {
       dadosMap.data = parseBalancete(parsed.textItems);
     }
 
+    try {
+      arquivoPath = await uploadPdf(empresaId, file, user.id);
+    } catch (err) {
+      console.error('Erro ao salvar PDF original:', err);
+      toast.warning('Dados importados, mas o PDF original não pôde ser salvo');
+    }
+
     const { error } = await supabase.from('documentos').insert({
       empresa_id: empresaId,
       tipo: parsed.reportType,
       nome_arquivo: parsed.fileName,
+      arquivo_path: arquivoPath,
       periodo: periodo,
-      dados_parseados: dadosMap.data || {},
+      dados_parseados: (dadosMap.data || {}) as unknown as Json,
       user_id: user.id,
     });
     if (error) {
@@ -200,8 +242,8 @@ const Index = () => {
       return;
     }
     setRefreshKey(k => k + 1);
-    return dadosMap.data;
-  }, []);
+    return { data: dadosMap.data, arquivoPath };
+  }, [uploadPdf]);
 
   const handleFileSelected = useCallback(async (category: CategoryKey, file: File) => {
     setCategories(prev => ({ ...prev, [category]: { status: 'processing', fileName: file.name } }));
@@ -225,7 +267,8 @@ const Index = () => {
       toast.warning(`O documento "${file.name}" foi identificado como ${result.reportTypeLabel}, não como ${category === 'balanco' ? 'Balanço' : category === 'dre' ? 'DRE' : 'Balancete'}. Importado mesmo assim.`);
     }
 
-    setCategories(prev => ({ ...prev, [category]: { status: 'done', fileName: file.name, parsed: result } }));
+    const localPdfUrl = URL.createObjectURL(file);
+    setCategories(prev => ({ ...prev, [category]: { status: 'done', fileName: file.name, parsed: result, localPdfUrl } }));
 
     // Auto-detect empresa if none selected
     let empresa = selectedEmpresa;
@@ -236,12 +279,13 @@ const Index = () => {
 
     // Save to database
     if (empresa) {
-      const dadosParseados = await saveDocumento(empresa.id, result, periodoFormatado);
-      if (dadosParseados) {
+      const saved = await saveDocumento(empresa.id, result, periodoFormatado, file);
+      if (saved?.data) {
         const group = getDocumentGroup(result.reportType);
-        if (group === 'balanco') useContabilStore.setState({ balanco: dadosParseados, empresaId: empresa.id, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
-        else if (group === 'dre') useContabilStore.setState({ dre: dadosParseados, empresaId: empresa.id, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
-        else if (group === 'balancete') useContabilStore.setState({ balancete: dadosParseados, empresaId: empresa.id, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
+        setCategories(prev => ({ ...prev, [category]: { ...prev[category], arquivoPath: saved.arquivoPath } }));
+        if (group === 'balanco') useContabilStore.setState({ balanco: saved.data as BalancoData, empresaId: empresa.id, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
+        else if (group === 'dre') useContabilStore.setState({ dre: saved.data as DREData, empresaId: empresa.id, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
+        else if (group === 'balancete') useContabilStore.setState({ balancete: saved.data as BalanceteData, empresaId: empresa.id, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
       }
     }
 
@@ -266,12 +310,12 @@ const Index = () => {
     navigate('/dashboard');
   };
 
-  const handleLoadDocumento = (doc: any) => {
+  const handleLoadDocumento = (doc: DocumentoRow) => {
     const cat = getDocumentGroup(doc.tipo) as CategoryKey;
     
     const pseudoParsed: ParsedPDF = {
       fileName: doc.nome_arquivo,
-      reportType: doc.tipo,
+      reportType: doc.tipo as ReportType,
       reportTypeLabel: doc.tipo,
       rawText: '',
       textItems: [],
@@ -281,15 +325,15 @@ const Index = () => {
 
     setCategories(prev => ({
       ...prev,
-      [cat]: { status: 'done', fileName: doc.nome_arquivo, parsed: pseudoParsed },
+      [cat]: { status: 'done', fileName: doc.nome_arquivo, parsed: pseudoParsed, arquivoPath: doc.arquivo_path },
     }));
 
     if (cat === 'balanco') {
-      useContabilStore.setState({ balanco: doc.dados_parseados });
+      useContabilStore.setState({ balanco: doc.dados_parseados as BalancoData });
     } else if (cat === 'dre') {
-      useContabilStore.setState({ dre: doc.dados_parseados });
+      useContabilStore.setState({ dre: doc.dados_parseados as DREData });
     } else if (cat === 'balancete') {
-      useContabilStore.setState({ balancete: doc.dados_parseados });
+      useContabilStore.setState({ balancete: doc.dados_parseados as BalanceteData });
     }
 
     toast.success(`${doc.nome_arquivo} carregado do histórico`);
@@ -335,6 +379,7 @@ const Index = () => {
             onFileSelected={(f) => handleFileSelected('balanco', f)}
             status={categories.balanco.status}
             fileName={categories.balanco.fileName}
+            onOpenPdf={categories.balanco.localPdfUrl || categories.balanco.arquivoPath ? () => categories.balanco.localPdfUrl ? window.open(categories.balanco.localPdfUrl, '_blank', 'noopener,noreferrer') : openPdfPath(categories.balanco.arquivoPath) : undefined}
             disabled={isProcessing || loadingEmpresa}
           />
           <CategoryDropZone
@@ -344,6 +389,7 @@ const Index = () => {
             onFileSelected={(f) => handleFileSelected('dre', f)}
             status={categories.dre.status}
             fileName={categories.dre.fileName}
+            onOpenPdf={categories.dre.localPdfUrl || categories.dre.arquivoPath ? () => categories.dre.localPdfUrl ? window.open(categories.dre.localPdfUrl, '_blank', 'noopener,noreferrer') : openPdfPath(categories.dre.arquivoPath) : undefined}
             disabled={isProcessing || loadingEmpresa}
           />
           <CategoryDropZone
@@ -353,6 +399,7 @@ const Index = () => {
             onFileSelected={(f) => handleFileSelected('balancete', f)}
             status={categories.balancete.status}
             fileName={categories.balancete.fileName}
+            onOpenPdf={categories.balancete.localPdfUrl || categories.balancete.arquivoPath ? () => categories.balancete.localPdfUrl ? window.open(categories.balancete.localPdfUrl, '_blank', 'noopener,noreferrer') : openPdfPath(categories.balancete.arquivoPath) : undefined}
             disabled={isProcessing || loadingEmpresa}
           />
         </div>
@@ -361,6 +408,7 @@ const Index = () => {
         <DocumentHistory
           empresaId={selectedEmpresa?.id || null}
           onLoadDocumento={handleLoadDocumento}
+          onOpenPdf={(doc) => openPdfPath(doc.arquivo_path)}
           refreshKey={refreshKey}
         />
 

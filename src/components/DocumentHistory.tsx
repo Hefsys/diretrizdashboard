@@ -5,14 +5,16 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { FileText, Trash2, Eye, ChevronRight, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { getDocumentGroup, getDocumentGroupLabel } from '@/lib/document-types';
+import { Json } from '@/integrations/supabase/types';
 
 interface Documento {
   id: string;
   tipo: string;
   nome_arquivo: string;
+  arquivo_path: string | null;
   periodo: string | null;
   created_at: string;
-  dados_parseados: any;
+  dados_parseados: Json;
 }
 
 const TIPO_LABELS: Record<string, string> = {
@@ -25,10 +27,11 @@ const TIPO_LABELS: Record<string, string> = {
 interface DocumentHistoryProps {
   empresaId: string | null;
   onLoadDocumento: (doc: Documento) => void;
+  onOpenPdf?: (doc: Documento) => void;
   refreshKey?: number;
 }
 
-const DocumentHistory = ({ empresaId, onLoadDocumento, refreshKey }: DocumentHistoryProps) => {
+const DocumentHistory = ({ empresaId, onLoadDocumento, onOpenPdf, refreshKey }: DocumentHistoryProps) => {
   const [docs, setDocs] = useState<Documento[]>([]);
   const [openPeriods, setOpenPeriods] = useState<Set<string>>(new Set());
 
@@ -111,7 +114,12 @@ const DocumentHistory = ({ empresaId, onLoadDocumento, refreshKey }: DocumentHis
                       </p>
                     </div>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onLoadDocumento(doc)}>
+                      {doc.arquivo_path && onOpenPdf && (
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onOpenPdf(doc)} title="Ver PDF">
+                          <FileText className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onLoadDocumento(doc)} title="Carregar dados">
                         <Eye className="w-3.5 h-3.5" />
                       </Button>
                       <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(doc.id)}>
