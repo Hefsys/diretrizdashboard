@@ -14,6 +14,7 @@ import { DREData } from '@/lib/parsers/dre-parser';
 import { BarChart3, FlaskConical, Loader2 } from 'lucide-react';
 import { useContabilStore } from '@/stores/useContabilStore';
 import { supabase } from '@/integrations/supabase/client';
+import { Json } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 
 interface Empresa {
@@ -123,7 +124,7 @@ const Index = () => {
       const latestByType: Partial<Record<CategoryKey, DocumentoRow>> = {};
       for (const doc of docs) {
         const key = getDocumentGroup(doc.tipo) as CategoryKey;
-        if (!latestByType[key]) latestByType[key] = doc;
+        if (!latestByType[key]) latestByType[key] = doc as DocumentoRow;
       }
 
       let periodo = '';
@@ -232,7 +233,7 @@ const Index = () => {
       nome_arquivo: parsed.fileName,
       arquivo_path: arquivoPath,
       periodo: periodo,
-      dados_parseados: dadosMap.data || {},
+      dados_parseados: (dadosMap.data || {}) as unknown as Json,
       user_id: user.id,
     });
     if (error) {
@@ -282,9 +283,9 @@ const Index = () => {
       if (saved?.data) {
         const group = getDocumentGroup(result.reportType);
         setCategories(prev => ({ ...prev, [category]: { ...prev[category], arquivoPath: saved.arquivoPath } }));
-        if (group === 'balanco') useContabilStore.setState({ balanco: saved.data, empresaId: empresa.id, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
-        else if (group === 'dre') useContabilStore.setState({ dre: saved.data, empresaId: empresa.id, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
-        else if (group === 'balancete') useContabilStore.setState({ balancete: saved.data, empresaId: empresa.id, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
+        if (group === 'balanco') useContabilStore.setState({ balanco: saved.data as BalancoData, empresaId: empresa.id, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
+        else if (group === 'dre') useContabilStore.setState({ dre: saved.data as DREData, empresaId: empresa.id, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
+        else if (group === 'balancete') useContabilStore.setState({ balancete: saved.data as BalanceteData, empresaId: empresa.id, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
       }
     }
 
