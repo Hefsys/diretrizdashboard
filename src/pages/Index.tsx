@@ -363,7 +363,7 @@ const Index = () => {
             onFileSelected={(f) => handleFileSelected('balanco', f)}
             status={categories.balanco.status}
             fileName={categories.balanco.fileName}
-            onOpenPdf={() => categories.balanco.localPdfUrl ? window.open(categories.balanco.localPdfUrl, '_blank', 'noopener,noreferrer') : openPdfPath(categories.balanco.arquivoPath)}
+            onOpenPdf={categories.balanco.localPdfUrl || categories.balanco.arquivoPath ? () => categories.balanco.localPdfUrl ? window.open(categories.balanco.localPdfUrl, '_blank', 'noopener,noreferrer') : openPdfPath(categories.balanco.arquivoPath) : undefined}
             disabled={isProcessing || loadingEmpresa}
           />
           <CategoryDropZone
@@ -373,7 +373,7 @@ const Index = () => {
             onFileSelected={(f) => handleFileSelected('dre', f)}
             status={categories.dre.status}
             fileName={categories.dre.fileName}
-            onOpenPdf={() => categories.dre.localPdfUrl ? window.open(categories.dre.localPdfUrl, '_blank', 'noopener,noreferrer') : openPdfPath(categories.dre.arquivoPath)}
+            onOpenPdf={categories.dre.localPdfUrl || categories.dre.arquivoPath ? () => categories.dre.localPdfUrl ? window.open(categories.dre.localPdfUrl, '_blank', 'noopener,noreferrer') : openPdfPath(categories.dre.arquivoPath) : undefined}
             disabled={isProcessing || loadingEmpresa}
           />
           <CategoryDropZone
@@ -383,7 +383,7 @@ const Index = () => {
             onFileSelected={(f) => handleFileSelected('balancete', f)}
             status={categories.balancete.status}
             fileName={categories.balancete.fileName}
-            onOpenPdf={() => categories.balancete.localPdfUrl ? window.open(categories.balancete.localPdfUrl, '_blank', 'noopener,noreferrer') : openPdfPath(categories.balancete.arquivoPath)}
+            onOpenPdf={categories.balancete.localPdfUrl || categories.balancete.arquivoPath ? () => categories.balancete.localPdfUrl ? window.open(categories.balancete.localPdfUrl, '_blank', 'noopener,noreferrer') : openPdfPath(categories.balancete.arquivoPath) : undefined}
             disabled={isProcessing || loadingEmpresa}
           />
         </div>
