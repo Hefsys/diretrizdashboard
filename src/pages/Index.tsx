@@ -24,6 +24,8 @@ type CategoryKey = 'balanco' | 'dre' | 'balancete';
 interface CategoryState {
   status: 'idle' | 'processing' | 'done' | 'error';
   fileName?: string;
+  arquivoPath?: string | null;
+  localPdfUrl?: string;
   parsed?: ParsedPDF;
 }
 
@@ -170,9 +172,25 @@ const Index = () => {
     return created;
   }, []);
 
-  const saveDocumento = useCallback(async (empresaId: string, parsed: ParsedPDF, periodo: string) => {
+  const uploadPdf = useCallback(async (empresaId: string, file: File, userId: string) => {
+    const safeName = file.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9._-]/g, '-');
+    const path = `${userId}/${empresaId}/${crypto.randomUUID()}-${safeName}`;
+    const { error } = await supabase.storage.from('documentos-pdf').upload(path, file, { contentType: 'application/pdf' });
+    if (error) throw error;
+    return path;
+  }, []);
+
+  const openPdfPath = useCallback(async (path?: string | null) => {
+    if (!path) { toast.info('PDF original não está disponível para este documento'); return; }
+    const { data, error } = await supabase.storage.from('documentos-pdf').createSignedUrl(path, 60 * 10);
+    if (error || !data?.signedUrl) { toast.error('Não foi possível abrir o PDF'); return; }
+    window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+  }, []);
+
+  const saveDocumento = useCallback(async (empresaId: string, parsed: ParsedPDF, periodo: string, file: File) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+    let arquivoPath: string | null = null;
 
     const dadosMap: Record<string, any> = {};
     if (parsed.reportType === 'balanco') {
@@ -186,22 +204,30 @@ const Index = () => {
       dadosMap.data = parseBalancete(parsed.textItems);
     }
 
+    try {
+      arquivoPath = await uploadPdf(empresaId, file, user.id);
+    } catch (err) {
+      console.error('Erro ao salvar PDF original:', err);
+      toast.warning('Dados importados, mas o PDF original não pôde ser salvo');
+    }
+
     const { error } = await supabase.from('documentos').insert({
       empresa_id: empresaId,
       tipo: parsed.reportType,
       nome_arquivo: parsed.fileName,
+      arquivo_path: arquivoPath,
       periodo: periodo,
       dados_parseados: dadosMap.data || {},
       user_id: user.id,
-    });
+    } as any);
     if (error) {
       console.error('Erro ao salvar documento:', error);
       toast.error('Erro ao salvar documento no banco de dados');
       return;
     }
     setRefreshKey(k => k + 1);
-    return dadosMap.data;
-  }, []);
+    return { data: dadosMap.data, arquivoPath };
+  }, [uploadPdf]);
 
   const handleFileSelected = useCallback(async (category: CategoryKey, file: File) => {
     setCategories(prev => ({ ...prev, [category]: { status: 'processing', fileName: file.name } }));
@@ -225,7 +251,8 @@ const Index = () => {
       toast.warning(`O documento "${file.name}" foi identificado como ${result.reportTypeLabel}, não como ${category === 'balanco' ? 'Balanço' : category === 'dre' ? 'DRE' : 'Balancete'}. Importado mesmo assim.`);
     }
 
-    setCategories(prev => ({ ...prev, [category]: { status: 'done', fileName: file.name, parsed: result } }));
+    const localPdfUrl = URL.createObjectURL(file);
+    setCategories(prev => ({ ...prev, [category]: { status: 'done', fileName: file.name, parsed: result, localPdfUrl } }));
 
     // Auto-detect empresa if none selected
     let empresa = selectedEmpresa;
@@ -236,12 +263,13 @@ const Index = () => {
 
     // Save to database
     if (empresa) {
-      const dadosParseados = await saveDocumento(empresa.id, result, periodoFormatado);
-      if (dadosParseados) {
+      const saved = await saveDocumento(empresa.id, result, periodoFormatado, file);
+      if (saved?.data) {
         const group = getDocumentGroup(result.reportType);
-        if (group === 'balanco') useContabilStore.setState({ balanco: dadosParseados, empresaId: empresa.id, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
-        else if (group === 'dre') useContabilStore.setState({ dre: dadosParseados, empresaId: empresa.id, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
-        else if (group === 'balancete') useContabilStore.setState({ balancete: dadosParseados, empresaId: empresa.id, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
+        setCategories(prev => ({ ...prev, [category]: { ...prev[category], arquivoPath: saved.arquivoPath } }));
+        if (group === 'balanco') useContabilStore.setState({ balanco: saved.data, empresaId: empresa.id, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
+        else if (group === 'dre') useContabilStore.setState({ dre: saved.data, empresaId: empresa.id, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
+        else if (group === 'balancete') useContabilStore.setState({ balancete: saved.data, empresaId: empresa.id, empresa: empresa.nome, cnpj: empresa.cnpj || '', periodo: periodoFormatado });
       }
     }
 
